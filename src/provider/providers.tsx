@@ -1,3 +1,7 @@
+"use client"
+
+
+
 import { ReactNode } from "react";
 import QueryProvider from "./queryProvider";
 
