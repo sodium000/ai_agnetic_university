@@ -8,7 +8,6 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
-  ExternalLink,
   GraduationCap,
   Layers,
   MapPin,
@@ -42,11 +41,13 @@ export function StudentCoursesView({
   todayClasses = studentDashboardData.todayClasses,
 }: StudentCoursesViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState<"ALL" | "CSE" | "MAT">("ALL");
+  const [selectedFilter, setSelectedFilter] = useState<"ALL" | "CSE" | "MAT">(
+    "ALL",
+  );
 
   const totalCredits = useMemo(
     () => courses.reduce((acc, c) => acc + c.credit, 0),
-    [courses]
+    [courses],
   );
 
   const averageProgress = useMemo(() => {
@@ -80,7 +81,6 @@ export function StudentCoursesView({
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-4 md:p-6 lg:gap-8">
-      {/* Top Banner & Navigation */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
@@ -88,7 +88,7 @@ export function StudentCoursesView({
               href="/student"
               className={cn(
                 buttonVariants({ variant: "ghost", size: "sm" }),
-                "h-8 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                "h-8 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground cursor-pointer",
               )}
             >
               <ArrowLeft className="size-3.5" />
@@ -104,7 +104,8 @@ export function StudentCoursesView({
             Current Enrolled Courses
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage your registered courses, view class venues, track syllabus progress, and connect with faculty.
+            Manage your registered courses, view class venues, track syllabus
+            progress, and connect with faculty.
           </p>
         </div>
 
@@ -113,7 +114,7 @@ export function StudentCoursesView({
             href="/student"
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "cursor-pointer"
+              "cursor-pointer",
             )}
           >
             <Calendar className="mr-2 size-4" />
@@ -121,8 +122,6 @@ export function StudentCoursesView({
           </Link>
         </div>
       </div>
-
-      {/* Summary KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="border-border/80 shadow-xs">
           <CardContent className="flex items-center gap-4 p-5">
@@ -130,11 +129,15 @@ export function StudentCoursesView({
               <BookOpen className="size-6" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Enrolled Courses</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Enrolled Courses
+              </p>
               <h3 className="text-2xl font-bold tracking-tight text-foreground">
                 {courses.length}
               </h3>
-              <p className="text-xs text-muted-foreground">Active this semester</p>
+              <p className="text-xs text-muted-foreground">
+                Active this semester
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -145,11 +148,18 @@ export function StudentCoursesView({
               <GraduationCap className="size-6" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Registered Credits</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Registered Credits
+              </p>
               <h3 className="text-2xl font-bold tracking-tight text-foreground">
-                {totalCredits} <span className="text-sm font-normal text-muted-foreground">Credits</span>
+                {totalCredits}{" "}
+                <span className="text-sm font-normal text-muted-foreground">
+                  Credits
+                </span>
               </h3>
-              <p className="text-xs text-muted-foreground">Full-time workload</p>
+              <p className="text-xs text-muted-foreground">
+                Full-time workload
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -160,11 +170,15 @@ export function StudentCoursesView({
               <Sparkles className="size-6" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Average Progress</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Average Progress
+              </p>
               <h3 className="text-2xl font-bold tracking-tight text-foreground">
                 {averageProgress}%
               </h3>
-              <p className="text-xs text-muted-foreground">Semester coursework</p>
+              <p className="text-xs text-muted-foreground">
+                Semester coursework
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -175,9 +189,14 @@ export function StudentCoursesView({
               <Clock className="size-6" />
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Today&apos;s Classes</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Today&apos;s Classes
+              </p>
               <h3 className="text-2xl font-bold tracking-tight text-foreground">
-                {todayClasses.length} <span className="text-sm font-normal text-muted-foreground">Sessions</span>
+                {todayClasses.length}{" "}
+                <span className="text-sm font-normal text-muted-foreground">
+                  Sessions
+                </span>
               </h3>
               <p className="text-xs text-muted-foreground">Scheduled today</p>
             </div>
@@ -240,7 +259,10 @@ export function StudentCoursesView({
                   <CardHeader className="space-y-2 pb-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="font-semibold text-primary">
+                        <Badge
+                          variant="outline"
+                          className="font-semibold text-primary"
+                        >
                           {course.code}
                         </Badge>
                         <Badge variant="secondary" className="text-xs">
@@ -248,7 +270,10 @@ export function StudentCoursesView({
                         </Badge>
                       </div>
 
-                      <Badge variant="secondary" className="font-medium text-xs">
+                      <Badge
+                        variant="secondary"
+                        className="font-medium text-xs"
+                      >
                         {course.credit} Credits
                       </Badge>
                     </div>
@@ -268,37 +293,16 @@ export function StudentCoursesView({
                       <MapPin className="size-3.5 shrink-0 text-primary" />
                       <span>{course.room || "Room Assigned Later"}</span>
                     </div>
-
                     {/* Today's Schedule Tag if active */}
-                    {todayClass ? (
-                      <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs text-foreground">
-                        <div className="flex items-center gap-1.5 font-medium text-primary">
-                          <Clock className="size-3.5 shrink-0" />
-                          <span>Today: {todayClass.startTime} - {todayClass.endTime}</span>
-                        </div>
-                        <p className="mt-1 text-muted-foreground">
-                          {todayClass.room} • {todayClass.building}
-                        </p>
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-xs text-foreground">
+                      <div className="flex items-center gap-1.5 font-medium text-primary">
+                        <Clock className="size-3.5 shrink-0" />
+                        <span>Today: 100 - 100</span>
                       </div>
-                    ) : null}
-
-                    {/* Progress Bar */}
-                    {typeof course.progress === "number" ? (
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Curriculum Progress</span>
-                          <span className="font-semibold text-foreground">
-                            {course.progress}%
-                          </span>
-                        </div>
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-primary transition-all duration-500"
-                            style={{ width: `${course.progress}%` }}
-                          />
-                        </div>
-                      </div>
-                    ) : null}
+                      <p className="mt-1 text-muted-foreground">
+                        500 • accounting
+                      </p>
+                    </div>
                   </CardContent>
                 </div>
 
@@ -306,16 +310,6 @@ export function StudentCoursesView({
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <CheckCircle2 className="size-3.5 text-emerald-500" />
                     <span>Registered</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="xs" className="cursor-pointer">
-                      Syllabus
-                    </Button>
-                    <Button size="xs" className="cursor-pointer">
-                      Materials
-                      <ExternalLink className="ml-1 size-3" />
-                    </Button>
                   </div>
                 </CardFooter>
               </Card>

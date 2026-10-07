@@ -1,6 +1,6 @@
 "use client";
 
-import { CirclePlusIcon, LayoutDashboardIcon, MailIcon } from "lucide-react";
+import { LayoutDashboardIcon, MailIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -26,24 +26,22 @@ export function NavMain({
 }) {
   const pathname = usePathname();
 
+  const cleanPath = pathname.replace(/\/$/, "");
+  const isDashboardActive = cleanPath === "/student" || cleanPath === "/dashboard";
+
   const isItemActive = (url: string, explicitActive?: boolean) => {
     if (explicitActive !== undefined) return explicitActive;
     if (!url || url === "#") return false;
 
-    const cleanPath = pathname.replace(/\/$/, "");
     const cleanUrl = url.replace(/\/$/, "");
 
+    // Exact match
     if (cleanPath === cleanUrl) return true;
 
-    // Handle student dashboard route aliases (/student and /dashboard)
+    // Subpath match (e.g. /student/current-courses/any-sub-route)
     if (
-      (cleanUrl === "/student" || cleanUrl === "/dashboard") &&
-      (cleanPath === "/student" || cleanPath === "/dashboard")
-    ) {
-      return true;
-    }
-
-    if (
+      cleanUrl !== "/student" &&
+      cleanUrl !== "/dashboard" &&
       cleanUrl !== "" &&
       cleanUrl !== "/" &&
       cleanPath.startsWith(`${cleanUrl}/`)
@@ -54,8 +52,11 @@ export function NavMain({
     return false;
   };
 
-  const isDashboardActive =
-    pathname === "/student" || pathname === "/dashboard";
+  const activeClasses =
+    "bg-primary! text-primary-foreground! font-semibold shadow-xs [&>svg]:text-primary-foreground! hover:bg-primary/90! hover:text-primary-foreground!";
+
+  const inactiveClasses =
+    "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&>svg]:text-muted-foreground hover:[&>svg]:text-foreground font-medium";
 
   return (
     <SidebarGroup>
@@ -67,10 +68,8 @@ export function NavMain({
               render={<Link href="/student" />}
               isActive={isDashboardActive}
               className={cn(
-                "min-w-8 duration-200 ease-linear",
-                isDashboardActive
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                "min-w-8 duration-150 ease-in-out cursor-pointer transition-colors",
+                isDashboardActive ? activeClasses : inactiveClasses,
               )}
             >
               <LayoutDashboardIcon />
@@ -98,10 +97,8 @@ export function NavMain({
                   isActive={active}
                   render={isLink ? <Link href={item.url} /> : undefined}
                   className={cn(
-                    "cursor-pointer transition-all duration-150 ease-in-out",
-                    active
-                      ? "bg-sidebar-accent font-semibold text-sidebar-accent-foreground shadow-2xs [&>svg]:text-primary"
-                      : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&>svg]:text-muted-foreground hover:[&>svg]:text-foreground",
+                    "cursor-pointer transition-colors duration-150 ease-in-out",
+                    active ? activeClasses : inactiveClasses,
                   )}
                 >
                   {item.icon}

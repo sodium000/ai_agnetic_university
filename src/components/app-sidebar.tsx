@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Banknote,
   CameraIcon,
   ChartBarIcon,
   CircleHelpIcon,
@@ -14,6 +15,7 @@ import {
   ListIcon,
   SearchIcon,
   Settings2Icon,
+  Trophy,
   UsersIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -47,14 +49,14 @@ const data = {
       icon: <ListIcon />,
     },
     {
-      title: "Projects",
-      url: "#",
-      icon: <FolderIcon />,
+      title: "Grades",
+      url: "/student/grades",
+      icon: <Trophy />,
     },
     {
-      title: "Team",
-      url: "#",
-      icon: <UsersIcon />,
+      title: "Payments",
+      url: "/student/payments",
+      icon: <Banknote />,
     },
   ],
   navClouds: [
