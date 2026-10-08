@@ -27,7 +27,12 @@ export function NavMain({
   const pathname = usePathname();
 
   const cleanPath = pathname.replace(/\/$/, "");
-  const isDashboardActive = cleanPath === "/student" || cleanPath === "/dashboard";
+  const isFacultyPath = cleanPath.startsWith("/faculty");
+  const dashboardHome = isFacultyPath ? "/faculty" : "/student";
+  const isDashboardActive =
+    cleanPath === "/student" ||
+    cleanPath === "/faculty" ||
+    cleanPath === "/dashboard";
 
   const isItemActive = (url: string, explicitActive?: boolean) => {
     if (explicitActive !== undefined) return explicitActive;
@@ -38,9 +43,10 @@ export function NavMain({
     // Exact match
     if (cleanPath === cleanUrl) return true;
 
-    // Subpath match (e.g. /student/current-courses/any-sub-route)
+    // Subpath match — exclude root dashboard paths from prefix matching
     if (
       cleanUrl !== "/student" &&
+      cleanUrl !== "/faculty" &&
       cleanUrl !== "/dashboard" &&
       cleanUrl !== "" &&
       cleanUrl !== "/" &&
@@ -65,7 +71,7 @@ export function NavMain({
           <SidebarMenuItem className="flex items-center gap-2">
             <SidebarMenuButton
               tooltip="Dashboard"
-              render={<Link href="/student" />}
+              render={<Link href={dashboardHome} />}
               isActive={isDashboardActive}
               className={cn(
                 "min-w-8 duration-150 ease-in-out cursor-pointer transition-colors",
