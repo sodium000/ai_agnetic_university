@@ -16,7 +16,9 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 export function SiteHeader() {
   const pathname = usePathname();
 
-  const isCurrentCourses = pathname?.startsWith("/student/current-courses");
+  let isCurrentCourses = pathname.split("/")[2]
+    ? pathname.split("/")[2].toUpperCase()
+    : null;
 
   return (
     <header className="sticky top-0 z-20 flex h-(--header-height) shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur-xs transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
@@ -44,7 +46,7 @@ export function SiteHeader() {
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
                   <BreadcrumbPage className="font-semibold text-foreground">
-                    Current Courses
+                    {isCurrentCourses}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </>

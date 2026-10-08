@@ -6,9 +6,9 @@ import type { StudentDashboardData } from "@/types/student-dashboard";
 import { AssignmentsCard } from "./assignments-card";
 import { AttendanceChart } from "./attendance-chart";
 import { DashboardStats } from "./dashboard-stats";
-import { FeeSummary } from "./fee-summary";
+
 import { GPAChart } from "./gpa-chart";
-import { RecentNotifications } from "./recent-notifications";
+
 import { StudentHeader } from "./student-header";
 import { UpcomingExams } from "./upcoming-exams";
 
@@ -45,23 +45,6 @@ export function StudentDashboard({
       >
         <AssignmentsCard assignments={data.assignments} />
         <UpcomingExams exams={data.upcomingExams} />
-      </section>
-
-      {/* Tuition Invoices & Official University Notifications */}
-      <section
-        aria-label="Fee summary and communications"
-        className="grid gap-6 lg:grid-cols-7"
-      >
-        <div className="lg:col-span-4">
-          <FeeSummary
-            feeSummary={data.invoices}
-            recentPayments={data.recentPayments}
-          />
-        </div>
-
-        <div className="lg:col-span-3">
-          <RecentNotifications notifications={data.notifications} />
-        </div>
       </section>
     </main>
   );

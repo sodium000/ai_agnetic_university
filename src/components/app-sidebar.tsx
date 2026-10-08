@@ -2,6 +2,7 @@
 
 import {
   Banknote,
+  BellIcon,
   CameraIcon,
   ChartBarIcon,
   CircleHelpIcon,
@@ -58,13 +59,18 @@ const data = {
       url: "/student/payments",
       icon: <Banknote />,
     },
+    {
+      title: "Profile",
+      url: "/student/profile",
+      icon: <UsersIcon />,
+    },
   ],
   navClouds: [
     {
-      title: "Capture",
-      icon: <CameraIcon />,
+      title: "",
+      icon: <BellIcon />,
       isActive: true,
-      url: "#",
+      url: "/student/notification",
       items: [
         {
           title: "Active Proposals",
@@ -126,9 +132,9 @@ const data = {
   ],
   documents: [
     {
-      name: "Data Library",
-      url: "#",
-      icon: <DatabaseIcon />,
+      name: "Nofication",
+      url: "/student/notification",
+      icon: <BellIcon />,
     },
     {
       name: "Reports",

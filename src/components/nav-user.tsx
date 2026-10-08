@@ -23,6 +23,7 @@ import {
   BellIcon,
   LogOutIcon,
 } from "lucide-react";
+import Link from "next/link";
 
 export function NavUser({
   user,
@@ -81,21 +82,21 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <CircleUserRoundIcon />
-                Account
+                <Link href="/student/profile">Student Profile</Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <CreditCardIcon />
-                Billing
+                <Link href="/student/invoice">Billing</Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <BellIcon />
-                Notifications
+                <Link href="/student/notification">Notifications</Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <LogOutIcon />
-              Log out
+              <Link href="/login">Log out</Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
