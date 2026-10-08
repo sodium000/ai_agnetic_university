@@ -111,6 +111,16 @@ export function StudentCoursesView({
 
         <div className="flex items-center gap-2">
           <Link
+            href="/student/enrollment"
+            className={cn(
+              buttonVariants({ size: "sm" }),
+              "cursor-pointer gap-1.5",
+            )}
+          >
+            <GraduationCap className="size-4" />
+            <span>Course Enrollment</span>
+          </Link>
+          <Link
             href="/student"
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),

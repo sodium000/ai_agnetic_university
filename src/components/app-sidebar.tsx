@@ -3,16 +3,11 @@
 import {
   Banknote,
   BellIcon,
-  CameraIcon,
-  ChartBarIcon,
   CircleHelpIcon,
   CommandIcon,
-  DatabaseIcon,
   FileChartColumnIcon,
   FileIcon,
-  FileTextIcon,
-  FolderIcon,
-  LayoutDashboardIcon,
+  GraduationCap,
   ListIcon,
   SearchIcon,
   Settings2Icon,
@@ -50,6 +45,11 @@ const data = {
       icon: <ListIcon />,
     },
     {
+      title: "Course Enrollment",
+      url: "/student/enrollment",
+      icon: <GraduationCap />,
+    },
+    {
       title: "Grades",
       url: "/student/grades",
       icon: <Trophy />,
@@ -63,54 +63,6 @@ const data = {
       title: "Profile",
       url: "/student/profile",
       icon: <UsersIcon />,
-    },
-  ],
-  navClouds: [
-    {
-      title: "",
-      icon: <BellIcon />,
-      isActive: true,
-      url: "/student/notification",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: <FileTextIcon />,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: <FileTextIcon />,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
     },
   ],
   navSecondary: [
@@ -132,7 +84,7 @@ const data = {
   ],
   documents: [
     {
-      name: "Nofication",
+      name: "Notifications",
       url: "/student/notification",
       icon: <BellIcon />,
     },
@@ -142,7 +94,7 @@ const data = {
       icon: <FileChartColumnIcon />,
     },
     {
-      name: "Word Assistant",
+      name: "Resources",
       url: "#",
       icon: <FileIcon />,
     },

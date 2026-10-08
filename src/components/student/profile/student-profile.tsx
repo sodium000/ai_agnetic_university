@@ -33,7 +33,6 @@ export function StudentProfile() {
   const [demoFallbackProfile, setDemoFallbackProfile] =
     useState<IStudentProfile | null>(null);
 
-  // Profile Query
   const {
     data: profileData,
     isLoading,

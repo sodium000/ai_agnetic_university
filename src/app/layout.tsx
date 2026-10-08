@@ -4,7 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import Providers from "@/provider/providers";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,11 +25,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", inter.variable)}
+      className={cn(
+        "h-full",
+        "antialiased",
+        geistSans.variable,
+        geistMono.variable,
+        "font-sans",
+        inter.variable,
+      )}
     >
-      <Providers>
-      <body className="min-h-full flex flex-col">{children}</body>
-      </Providers>
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
