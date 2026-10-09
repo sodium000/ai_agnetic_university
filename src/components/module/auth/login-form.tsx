@@ -177,6 +177,51 @@ export function LoginForm({
                 </Button>
               </Field>
 
+              {/* Quick Demo Logins */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-medium text-muted-foreground block text-center">
+                  Quick Demo Sign-in
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8 cursor-pointer border-dashed"
+                    onClick={() => {
+                      form.setFieldValue("email", "admin@university.edu");
+                      form.setFieldValue("password", "Admin@1234");
+                    }}
+                  >
+                    Admin
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8 cursor-pointer border-dashed"
+                    onClick={() => {
+                      form.setFieldValue("email", "rahim@university.edu");
+                      form.setFieldValue("password", "FacPass@123");
+                    }}
+                  >
+                    Faculty
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8 cursor-pointer border-dashed"
+                    onClick={() => {
+                      form.setFieldValue("email", "ali@student.edu");
+                      form.setFieldValue("password", "Pass@1234");
+                    }}
+                  >
+                    Student
+                  </Button>
+                </div>
+              </div>
+
               {/* Social login separator */}
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
                 Or continue with

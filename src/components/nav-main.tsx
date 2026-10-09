@@ -27,11 +27,13 @@ export function NavMain({
   const pathname = usePathname();
 
   const cleanPath = pathname.replace(/\/$/, "");
+  const isAdminPath = cleanPath.startsWith("/admin");
   const isFacultyPath = cleanPath.startsWith("/faculty");
-  const dashboardHome = isFacultyPath ? "/faculty" : "/student";
+  const dashboardHome = isAdminPath ? "/admin" : isFacultyPath ? "/faculty" : "/student";
   const isDashboardActive =
     cleanPath === "/student" ||
     cleanPath === "/faculty" ||
+    cleanPath === "/admin" ||
     cleanPath === "/dashboard";
 
   const isItemActive = (url: string, explicitActive?: boolean) => {
@@ -47,6 +49,7 @@ export function NavMain({
     if (
       cleanUrl !== "/student" &&
       cleanUrl !== "/faculty" &&
+      cleanUrl !== "/admin" &&
       cleanUrl !== "/dashboard" &&
       cleanUrl !== "" &&
       cleanUrl !== "/" &&

@@ -3,7 +3,7 @@
  * All browser-only (localStorage). SSR-safe with typeof window checks.
  */
 
-export type UserRole = "STUDENT" | "FACULTY" | "ADMIN";
+export type UserRole = "STUDENT" | "FACULTY" | "ADMIN" | "SUPER_ADMIN";
 
 export interface DecodedToken {
   id: string;
@@ -77,6 +77,7 @@ export function getRoleDashboardPath(role: UserRole): string {
     case "FACULTY":
       return "/faculty";
     case "ADMIN":
+    case "SUPER_ADMIN":
       return "/admin";
     case "STUDENT":
     default:
