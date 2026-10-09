@@ -8,6 +8,7 @@ import {
   LogOutIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -24,6 +25,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { logoutUser } from "@/services/auth.service";
 
 export function NavUser({
   user,
@@ -35,6 +37,7 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
+  const router = useRouter();
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -93,10 +96,15 @@ export function NavUser({
                 <Link href="/student/notification">Notifications</Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={async () => {
+                await logoutUser();
+                router.push("/login");
+              }}
+              className="cursor-pointer"
+            >
               <LogOutIcon />
-              <Link href="/login">Log out</Link>
+              <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

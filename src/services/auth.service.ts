@@ -1,5 +1,4 @@
 import apiFetch from "@/lib/apiClient";
-import { setAccessToken } from "@/lib/auth";
 
 export interface LoginPayload {
   email: string;
@@ -32,11 +31,8 @@ export async function loginUser(
     body: payload,
   });
 
-  if (response?.data?.accessToken) {
-    setAccessToken(response.data.accessToken);
-    if (response.data.refreshToken) {
-      localStorage.setItem("refreshToken", response.data.refreshToken);
-    }
+  if (response?.data?.user) {
+    // Tokens are set as HttpOnly cookies by the server — no client storage needed.
     return response.data;
   }
 
