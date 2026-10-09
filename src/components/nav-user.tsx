@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  BellIcon,
+  CircleUserRoundIcon,
+  CreditCardIcon,
+  EllipsisVerticalIcon,
+  LogOutIcon,
+} from "lucide-react";
+import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -16,14 +24,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  EllipsisVerticalIcon,
-  CircleUserRoundIcon,
-  CreditCardIcon,
-  BellIcon,
-  LogOutIcon,
-} from "lucide-react";
-import Link from "next/link";
 
 export function NavUser({
   user,
@@ -86,7 +86,7 @@ export function NavUser({
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <CreditCardIcon />
-                <Link href="/student/invoice">Billing</Link>
+                <Link href="/student/payments">Billing</Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <BellIcon />

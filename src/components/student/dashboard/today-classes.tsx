@@ -1,6 +1,15 @@
-import { Building2, CalendarCheck, Clock3, MapPin, User } from "lucide-react";
+import {
+  Building2,
+  CalendarCheck,
+  ChevronRight,
+  Clock3,
+  MapPin,
+  User,
+} from "lucide-react";
+import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,13 +17,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { TodayClass } from "@/types/student-dashboard";
 
 interface TodayClassesProps {
   classes: TodayClass[];
 }
 
-export function TodayClasses({ classes }: TodayClassesProps) {
+export function TodayClasses({ classes = [] }: TodayClassesProps) {
   const hasClasses = classes && classes.length > 0;
 
   return (
@@ -22,7 +32,7 @@ export function TodayClasses({ classes }: TodayClassesProps) {
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <CardTitle className="text-base font-semibold sm:text-lg">
+            <CardTitle className="text-base font-semibold sm:text-lg text-foreground">
               Today&apos;s Schedule
             </CardTitle>
             {hasClasses ? (
@@ -31,10 +41,21 @@ export function TodayClasses({ classes }: TodayClassesProps) {
               </Badge>
             ) : null}
           </div>
-          <CardDescription>
+          <CardDescription className="text-xs">
             Lectures and lab sessions scheduled for today
           </CardDescription>
         </div>
+
+        <Link
+          href="/student/current-courses"
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "sm" }),
+            "text-xs cursor-pointer",
+          )}
+        >
+          All courses
+          <ChevronRight className="ml-1 size-3.5" />
+        </Link>
       </CardHeader>
 
       <CardContent className="flex-1 space-y-4">
@@ -113,7 +134,7 @@ export function TodayClasses({ classes }: TodayClassesProps) {
               No classes scheduled for today
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Enjoy your free time or prepare for upcoming assessments.
+              Enjoy your study break or work on upcoming course projects.
             </p>
           </div>
         )}

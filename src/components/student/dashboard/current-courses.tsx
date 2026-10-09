@@ -1,9 +1,14 @@
-import { BookOpen, ChevronRight, MapPin, User } from "lucide-react";
+import {
+  BookOpen,
+  ChevronRight,
+  GraduationCap,
+  MapPin,
+  User,
+} from "lucide-react";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -11,16 +16,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { CurrentCourse } from "@/types/student-dashboard";
 
 interface CurrentCoursesProps {
   courses: CurrentCourse[];
 }
 
-export function CurrentCourses({ courses }: CurrentCoursesProps) {
+export function CurrentCourses({ courses = [] }: CurrentCoursesProps) {
   const hasCourses = courses && courses.length > 0;
   const totalCredits = hasCourses
-    ? courses.reduce((acc, c) => acc + c.credit, 0)
+    ? courses.reduce((acc, c) => acc + (c.credit || 3), 0)
     : 0;
 
   return (
@@ -28,7 +34,7 @@ export function CurrentCourses({ courses }: CurrentCoursesProps) {
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <CardTitle className="text-base font-semibold sm:text-lg">
+            <CardTitle className="text-base font-semibold sm:text-lg text-foreground">
               Current Courses
             </CardTitle>
             {hasCourses ? (
@@ -37,7 +43,7 @@ export function CurrentCourses({ courses }: CurrentCoursesProps) {
               </Badge>
             ) : null}
           </div>
-          <CardDescription>
+          <CardDescription className="text-xs">
             {totalCredits > 0
               ? `${totalCredits} total credits registered for this semester`
               : "Active course enrollments"}
@@ -48,7 +54,7 @@ export function CurrentCourses({ courses }: CurrentCoursesProps) {
           href="/student/current-courses"
           className={cn(
             buttonVariants({ variant: "ghost", size: "sm" }),
-            "text-xs cursor-pointer"
+            "text-xs cursor-pointer",
           )}
         >
           View all
@@ -59,7 +65,7 @@ export function CurrentCourses({ courses }: CurrentCoursesProps) {
       <CardContent className="flex-1 p-0">
         {hasCourses ? (
           <div className="divide-y divide-border/60">
-            {courses.map((course) => (
+            {courses.slice(0, 5).map((course) => (
               <div
                 key={course.id}
                 className="flex flex-col gap-3 p-4 transition-colors hover:bg-muted/30 sm:flex-row sm:items-center sm:justify-between sm:px-6"
@@ -100,7 +106,10 @@ export function CurrentCourses({ courses }: CurrentCoursesProps) {
                 </div>
 
                 <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end sm:justify-center">
-                  <Badge variant="outline" className="shrink-0 font-medium">
+                  <Badge
+                    variant="outline"
+                    className="shrink-0 font-medium text-xs"
+                  >
                     {course.credit} Credits
                   </Badge>
 
@@ -122,8 +131,18 @@ export function CurrentCourses({ courses }: CurrentCoursesProps) {
             ))}
           </div>
         ) : (
-          <div className="flex h-48 items-center justify-center p-6 text-sm text-muted-foreground">
-            No courses enrolled for this term.
+          <div className="flex flex-col items-center justify-center p-8 text-center text-sm text-muted-foreground">
+            <p>No courses registered for this term.</p>
+            <Link
+              href="/student/enrollment"
+              className={cn(
+                buttonVariants({ size: "sm" }),
+                "mt-3 gap-1.5 text-xs cursor-pointer",
+              )}
+            >
+              <GraduationCap className="size-3.5" />
+              Enroll in Courses
+            </Link>
           </div>
         )}
       </CardContent>

@@ -3,10 +3,13 @@ import {
   AlertTriangle,
   Bell,
   CheckCircle2,
+  ChevronRight,
   Info,
 } from "lucide-react";
+import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -14,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { Notification, NotificationType } from "@/types/student-dashboard";
 
 function NotificationTypeIcon({ type }: { type: NotificationType }) {
@@ -34,7 +38,7 @@ interface RecentNotificationsProps {
 }
 
 export function RecentNotifications({
-  notifications,
+  notifications = [],
 }: RecentNotificationsProps) {
   const hasNotifications = notifications && notifications.length > 0;
   const unreadCount = hasNotifications
@@ -46,7 +50,7 @@ export function RecentNotifications({
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <CardTitle className="text-base font-semibold sm:text-lg">
+            <CardTitle className="text-base font-semibold sm:text-lg text-foreground">
               Recent Notifications
             </CardTitle>
             {unreadCount > 0 ? (
@@ -55,15 +59,26 @@ export function RecentNotifications({
               </Badge>
             ) : null}
           </div>
-          <CardDescription>
+          <CardDescription className="text-xs">
             Official university announcements and academic alerts
           </CardDescription>
         </div>
+
+        <Link
+          href="/student/notification"
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "sm" }),
+            "text-xs cursor-pointer",
+          )}
+        >
+          View all
+          <ChevronRight className="ml-1 size-3.5" />
+        </Link>
       </CardHeader>
 
       <CardContent className="flex-1 space-y-3">
         {hasNotifications ? (
-          notifications.map((notification) => (
+          notifications.slice(0, 4).map((notification) => (
             <div
               key={notification.id}
               className={`flex items-start gap-3.5 rounded-lg border p-3.5 transition-colors hover:bg-muted/30 ${

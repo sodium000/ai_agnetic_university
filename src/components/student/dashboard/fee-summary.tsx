@@ -1,15 +1,17 @@
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronRight,
   Clock3,
   CreditCard,
   Receipt,
   Wallet,
   XCircle,
 } from "lucide-react";
+import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -17,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type {
   FeeSummaryData,
   InvoiceStatus,
@@ -85,6 +88,17 @@ export function FeeSummary({
             Semester billing status, invoice dues, and receipts
           </CardDescription>
         </div>
+
+        <Link
+          href="/student/payments"
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "sm" }),
+            "text-xs cursor-pointer",
+          )}
+        >
+          Manage
+          <ChevronRight className="ml-1 size-3.5" />
+        </Link>
       </CardHeader>
 
       <CardContent className="flex-1 space-y-5">
@@ -208,10 +222,12 @@ export function FeeSummary({
           </div>
         ) : null}
 
-        <Button variant="outline" className="w-full text-xs">
-          <Receipt className="mr-2 size-3.5" />
-          View All Invoices & Receipts
-        </Button>
+        <Link href="/student/payments" className="block w-full">
+          <Button variant="outline" className="w-full text-xs cursor-pointer">
+            <Receipt className="mr-2 size-3.5" />
+            View All Invoices & Receipts
+          </Button>
+        </Link>
       </CardContent>
     </Card>
   );
