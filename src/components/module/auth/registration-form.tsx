@@ -1,32 +1,35 @@
+"use client";
 
-"use client"
-
-import { cn } from "@/lib/utils"
-import { useForm } from "@tanstack/react-form"
-import { z } from "zod"
-
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { useForm } from "@tanstack/react-form";
+import { Eye, EyeClosed } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Field,
   FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { RegisterFormValues, registerSchema } from "@/validation/registration.validation"
-import { useState } from "react"
-import { Eye, EyeClosed } from "lucide-react"
-
-
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { registerUser } from "@/services/auth.service";
+import {
+  type RegisterFormValues,
+  registerSchema,
+} from "@/validation/registration.validation";
 
 export function RegisterForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
 
-        const [showPassword, setShowPassword] = useState(false);
   const form = useForm({
     defaultValues: {
       name: "",
@@ -41,34 +44,43 @@ export function RegisterForm({
     },
 
     onSubmit: async ({ value }) => {
-      console.log("Registration data:", value)
+      try {
+        await registerUser({
+          name: value.name,
+          email: value.email,
+          phone: value.phone,
+          password: value.password,
+        });
 
-      // Later:
-      // await registerUser(value)
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem("registrationEmail", value.email);
+        }
+
+        toast.success("Verification code sent! Please check your email.");
+        router.push(`/otp?email=${encodeURIComponent(value.email)}`);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Registration failed";
+        toast.error(msg);
+      }
     },
-  })
+  });
 
   return (
-    <div
-      className={cn("flex flex-col gap-6", className)}
-      {...props}
-    >
+    <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
           <form
             onSubmit={(event) => {
-              event.preventDefault()
-              event.stopPropagation()
-              form.handleSubmit()
+              event.preventDefault();
+              event.stopPropagation();
+              form.handleSubmit();
             }}
             className="p-6 md:p-8"
           >
             <FieldGroup>
               {/* Header */}
               <div className="flex flex-col items-center gap-2 text-center">
-                <h1 className="text-2xl font-bold">
-                  Create an account
-                </h1>
+                <h1 className="text-2xl font-bold">Create an account</h1>
 
                 <p className="text-balance text-muted-foreground">
                   Register for your University Management System account
@@ -79,9 +91,7 @@ export function RegisterForm({
               <form.Field name="name">
                 {(field) => (
                   <Field>
-                    <FieldLabel htmlFor={field.name}>
-                      Name
-                    </FieldLabel>
+                    <FieldLabel htmlFor={field.name}>Name</FieldLabel>
 
                     <Input
                       id={field.name}
@@ -94,8 +104,7 @@ export function RegisterForm({
                         field.handleChange(event.target.value)
                       }
                       aria-invalid={
-                        field.state.meta.isTouched &&
-                        !field.state.meta.isValid
+                        field.state.meta.isTouched && !field.state.meta.isValid
                       }
                     />
 
@@ -103,9 +112,7 @@ export function RegisterForm({
                       !field.state.meta.isValid && (
                         <FieldError>
                           {field.state.meta.errors.map((error) => (
-                            <div key={error?.message}>
-                              {error?.message}
-                            </div>
+                            <div key={error?.message}>{error?.message}</div>
                           ))}
                         </FieldError>
                       )}
@@ -117,9 +124,7 @@ export function RegisterForm({
               <form.Field name="email">
                 {(field) => (
                   <Field>
-                    <FieldLabel htmlFor={field.name}>
-                      Email
-                    </FieldLabel>
+                    <FieldLabel htmlFor={field.name}>Email</FieldLabel>
 
                     <Input
                       id={field.name}
@@ -132,8 +137,7 @@ export function RegisterForm({
                         field.handleChange(event.target.value)
                       }
                       aria-invalid={
-                        field.state.meta.isTouched &&
-                        !field.state.meta.isValid
+                        field.state.meta.isTouched && !field.state.meta.isValid
                       }
                     />
 
@@ -141,9 +145,7 @@ export function RegisterForm({
                       !field.state.meta.isValid && (
                         <FieldError>
                           {field.state.meta.errors.map((error) => (
-                            <div key={error?.message}>
-                              {error?.message}
-                            </div>
+                            <div key={error?.message}>{error?.message}</div>
                           ))}
                         </FieldError>
                       )}
@@ -155,9 +157,7 @@ export function RegisterForm({
               <form.Field name="phone">
                 {(field) => (
                   <Field>
-                    <FieldLabel htmlFor={field.name}>
-                      Phone
-                    </FieldLabel>
+                    <FieldLabel htmlFor={field.name}>Phone</FieldLabel>
 
                     <Input
                       id={field.name}
@@ -170,8 +170,7 @@ export function RegisterForm({
                         field.handleChange(event.target.value)
                       }
                       aria-invalid={
-                        field.state.meta.isTouched &&
-                        !field.state.meta.isValid
+                        field.state.meta.isTouched && !field.state.meta.isValid
                       }
                     />
 
@@ -179,9 +178,7 @@ export function RegisterForm({
                       !field.state.meta.isValid && (
                         <FieldError>
                           {field.state.meta.errors.map((error) => (
-                            <div key={error?.message}>
-                              {error?.message}
-                            </div>
+                            <div key={error?.message}>{error?.message}</div>
                           ))}
                         </FieldError>
                       )}
@@ -193,9 +190,7 @@ export function RegisterForm({
               <form.Field name="photo">
                 {(field) => (
                   <Field>
-                    <FieldLabel htmlFor={field.name}>
-                      Profile Photo
-                    </FieldLabel>
+                    <FieldLabel htmlFor={field.name}>Profile Photo</FieldLabel>
 
                     <Input
                       id={field.name}
@@ -204,9 +199,9 @@ export function RegisterForm({
                       accept="image/*"
                       onBlur={field.handleBlur}
                       onChange={(event) => {
-                        const file = event.target.files?.[0]
+                        const file = event.target.files?.[0];
 
-                        field.handleChange(file)
+                        field.handleChange(file);
                       }}
                     />
 
@@ -218,9 +213,7 @@ export function RegisterForm({
                       !field.state.meta.isValid && (
                         <FieldError>
                           {field.state.meta.errors.map((error) => (
-                            <div key={error?.message}>
-                              {error?.message}
-                            </div>
+                            <div key={error?.message}>{error?.message}</div>
                           ))}
                         </FieldError>
                       )}
@@ -232,13 +225,10 @@ export function RegisterForm({
               <form.Field name="password">
                 {(field) => (
                   <Field>
-                    <FieldLabel htmlFor={field.name}>
-                      Password
-                    </FieldLabel>
+                    <FieldLabel htmlFor={field.name}>Password</FieldLabel>
 
-
-                        <div className="relative">
-                        <Input
+                    <div className="relative">
+                      <Input
                         id={field.name}
                         name={field.name}
                         type={showPassword ? "text" : "password"}
@@ -246,38 +236,36 @@ export function RegisterForm({
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(event) =>
-                            field.handleChange(event.target.value)
+                          field.handleChange(event.target.value)
                         }
                         aria-invalid={
-                            field.state.meta.isTouched &&
-                            !field.state.meta.isValid
+                          field.state.meta.isTouched &&
+                          !field.state.meta.isValid
                         }
-                        />
+                      />
 
-                            <button
-                            className="absolute top-1/2 right-1 z-10 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            type="button"
-                            aria-label={
-                                showPassword ? "Hide password" : "Show password"
-                            }
-                            aria-pressed={showPassword}
-                            onClick={() => setShowPassword((prev) => !prev)}
-                            >
-                            {showPassword ? (
-                                <EyeClosed aria-hidden="true" className="size-4" />
-                            ) : (
-                                <Eye aria-hidden="true" className="size-4" />
-                            )}
-                            </button>
-                            </div>
+                      <button
+                        className="absolute top-1/2 right-1 z-10 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        type="button"
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
+                        aria-pressed={showPassword}
+                        onClick={() => setShowPassword((prev) => !prev)}
+                      >
+                        {showPassword ? (
+                          <EyeClosed aria-hidden="true" className="size-4" />
+                        ) : (
+                          <Eye aria-hidden="true" className="size-4" />
+                        )}
+                      </button>
+                    </div>
 
                     {field.state.meta.isTouched &&
                       !field.state.meta.isValid && (
                         <FieldError>
                           {field.state.meta.errors.map((error) => (
-                            <div key={error?.message}>
-                              {error?.message}
-                            </div>
+                            <div key={error?.message}>{error?.message}</div>
                           ))}
                         </FieldError>
                       )}
@@ -287,10 +275,7 @@ export function RegisterForm({
 
               {/* Submit */}
               <Field>
-                <Button
-                  type="submit"
-                  disabled={form.state.isSubmitting}
-                >
+                <Button type="submit" disabled={form.state.isSubmitting}>
                   {form.state.isSubmitting
                     ? "Creating account..."
                     : "Create account"}
@@ -300,10 +285,7 @@ export function RegisterForm({
               {/* Login */}
               <FieldDescription className="text-center">
                 Already have an account?{" "}
-                <a
-                  href="/login"
-                  className="underline underline-offset-4"
-                >
+                <a href="/login" className="underline underline-offset-4">
                   Login
                 </a>
               </FieldDescription>
@@ -323,21 +305,15 @@ export function RegisterForm({
 
       <FieldDescription className="px-6 text-center">
         By creating an account, you agree to our{" "}
-        <a
-          href="/terms"
-          className="underline underline-offset-4"
-        >
+        <a href="/terms" className="underline underline-offset-4">
           Terms of Service
         </a>{" "}
         and{" "}
-        <a
-          href="/privacy"
-          className="underline underline-offset-4"
-        >
+        <a href="/privacy" className="underline underline-offset-4">
           Privacy Policy
         </a>
         .
       </FieldDescription>
     </div>
-  )
+  );
 }

@@ -1,7 +1,11 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { useForm } from "@tanstack/react-form";
+import { Eye, EyeClosed, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -13,14 +17,13 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { type LoginFormValues, loginShema } from "@/validation/login.validation";
-import { useState } from "react";
-import { Eye, EyeClosed, Loader2 } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { loginUser } from "@/services/auth.service";
 import { getRoleDashboardPath } from "@/lib/auth";
-import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { loginUser } from "@/services/auth.service";
+import {
+  type LoginFormValues,
+  loginShema,
+} from "@/validation/login.validation";
 
 export function LoginForm({
   className,
@@ -41,14 +44,12 @@ export function LoginForm({
 
     onSubmit: async ({ value }) => {
       try {
-        const data = await loginUser(value);
-        toast.success(`Welcome back, ${data.user.name}!`);
-        const path = getRoleDashboardPath(data.user.role);
-        router.push(path);
+        await loginUser(value);
+        // if (typeof window !== "undefined") {
+        //   sessionStorage.setItem("loginEmail", value.email);
+        // }
       } catch (err: unknown) {
-        const msg =
-          err instanceof Error ? err.message : "Login failed. Please try again.";
-        toast.error(msg);
+        toast.error("Login failed. Please try again.");
       }
     },
   });
@@ -136,7 +137,9 @@ export function LoginForm({
                         <button
                           className="absolute top-1/2 right-1 z-10 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           type="button"
-                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          aria-label={
+                            showPassword ? "Hide password" : "Show password"
+                          }
                           aria-pressed={showPassword}
                           onClick={() => setShowPassword((prev) => !prev)}
                         >
