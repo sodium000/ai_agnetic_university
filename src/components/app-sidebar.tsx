@@ -30,14 +30,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-import { studentDashboardData } from "@/data/student-dashboard";
-
 const data = {
-  user: {
-    name: studentDashboardData.student.name,
-    email: studentDashboardData.student.email,
-    avatar: studentDashboardData.student.photoUrl || "/avatars/shadcn.jpg",
-  },
   navMain: [
     {
       title: "Current Courses",
@@ -122,7 +115,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser userRole="STUDENT" />
       </SidebarFooter>
     </Sidebar>
   );

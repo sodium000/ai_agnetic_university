@@ -11,7 +11,6 @@ import {
   FileBarChart2,
   GraduationCap,
   Layers,
-  SearchIcon,
   Settings2Icon,
   ShieldCheck,
   UsersIcon,
@@ -57,12 +56,6 @@ const documents = [
   { name: "Financial Ledger", url: "/admin/payments", icon: <Banknote /> },
 ];
 
-const adminUser = {
-  name: "System Administrator",
-  email: "admin@university.edu",
-  avatar: "/avatars/shadcn.jpg",
-};
-
 export function AdminSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
@@ -94,7 +87,7 @@ export function AdminSidebar({
       </SidebarContent>
 
       <SidebarFooter>
-        <NavUser user={adminUser} />
+        <NavUser userRole="ADMIN" />
       </SidebarFooter>
     </Sidebar>
   );

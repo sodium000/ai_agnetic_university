@@ -2,8 +2,24 @@ import apiFetch from "@/lib/apiClient";
 import type {
   MarkReadApiResponse,
   Notification,
-  NotificationsApiResponse,
 } from "@/types/student-notification";
+
+function extractNotifications(payload: unknown): Notification[] | null {
+  if (Array.isArray(payload)) return payload as Notification[];
+  if (!payload || typeof payload !== "object") return null;
+
+  const response = payload as Record<string, unknown>;
+  for (const key of ["data", "notifications", "items", "results", "result"]) {
+    const value = response[key];
+    if (Array.isArray(value)) return value as Notification[];
+    if (value && typeof value === "object") {
+      const nested = extractNotifications(value);
+      if (nested) return nested;
+    }
+  }
+
+  return null;
+}
 
 /**
  * GET /api/v1/student/me/notifications
@@ -16,11 +32,22 @@ export async function fetchNotifications(
     ? "/api/v1/student/me/notifications?unreadOnly=true"
     : "/api/v1/student/me/notifications";
 
-  const response = await apiFetch<NotificationsApiResponse>(url);
-  if (response?.data) {
-    return response.data;
-  }
-  throw new Error(response?.message || "Failed to load notifications");
+  const response = await apiFetch<unknown>(url);
+  const notifications = extractNotifications(response);
+  if (notifications) return notifications;
+
+  const serverMessage =
+    response &&
+    typeof response === "object" &&
+    "success" in response &&
+    response.success === false &&
+    "message" in response &&
+    typeof response.message === "string"
+      ? response.message
+      : null;
+  throw new Error(
+    serverMessage ?? "Expected an array of notifications in the API response",
+  );
 }
 
 export async function fetchNotificationDetail(

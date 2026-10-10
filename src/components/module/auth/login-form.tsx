@@ -221,7 +221,7 @@ export function LoginForm({
                     size="sm"
                     className="text-xs h-8 cursor-pointer border-dashed"
                     onClick={() => {
-                      form.setFieldValue("email", "raisultonmoy.dev@gmail.com");
+                      form.setFieldValue("email", "sterlingmarcus871@gmail.com");
                       form.setFieldValue("password", "Password123!");
                     }}
                   >
@@ -233,8 +233,8 @@ export function LoginForm({
                     size="sm"
                     className="text-xs h-8 cursor-pointer border-dashed"
                     onClick={() => {
-                      form.setFieldValue("email", "ali@student.edu");
-                      form.setFieldValue("password", "Pass@1234");
+                      form.setFieldValue("email", "elenarodriguez.tx@gmail.com");
+                      form.setFieldValue("password", "Password123!");
                     }}
                   >
                     Student

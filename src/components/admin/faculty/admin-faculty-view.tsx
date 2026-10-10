@@ -78,9 +78,13 @@ export function AdminFacultyView() {
   const filteredFaculty = facultyList.filter((f) => {
     const matchesSearch =
       !search ||
-      f.name.toLowerCase().includes(search.toLowerCase()) ||
-      f.email.toLowerCase().includes(search.toLowerCase()) ||
-      f.designation.toLowerCase().includes(search.toLowerCase()) ||
+      (f.name || f.user?.name || "")
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      (f.email || f.user?.email || "")
+        .toLowerCase()
+        .includes(search.toLowerCase()) ||
+      (f.designation || "").toLowerCase().includes(search.toLowerCase()) ||
       (f.specialization && f.specialization.toLowerCase().includes(search.toLowerCase()));
 
     const matchesDept = !deptFilter || f.departmentId === deptFilter;
@@ -206,7 +210,7 @@ export function AdminFacultyView() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1">
                     <CardTitle className="text-base font-semibold text-foreground">
-                      {member.name}
+                      {member.name || member.user?.name || "Unnamed Faculty"}
                     </CardTitle>
                     <CardDescription className="text-xs font-medium text-primary">
                       {member.designation}
@@ -220,7 +224,9 @@ export function AdminFacultyView() {
               <CardContent className="space-y-2.5 text-xs text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Mail className="size-3.5 text-muted-foreground shrink-0" />
-                  <span className="truncate text-foreground font-mono">{member.email}</span>
+                  <span className="truncate text-foreground font-mono">
+                    {member.email || member.user?.email || "No email available"}
+                  </span>
                 </div>
                 {member.phone && (
                   <div className="flex items-center gap-2">

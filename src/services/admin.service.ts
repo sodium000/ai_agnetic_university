@@ -57,6 +57,94 @@ function extractArray<T>(res: unknown): T[] | null {
   return null;
 }
 
+function normalizeAdminFacultyMember(
+  value: unknown,
+): AdminFacultyMember | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+
+  const member = value as Record<string, unknown>;
+  const user =
+    member.user && typeof member.user === "object"
+      ? (member.user as Record<string, unknown>)
+      : {};
+  const rawDepartment =
+    member.department && typeof member.department === "object"
+      ? (member.department as Record<string, unknown>)
+      : null;
+  const department =
+    rawDepartment &&
+    typeof rawDepartment.id === "string" &&
+    typeof rawDepartment.name === "string" &&
+    typeof rawDepartment.code === "string"
+      ? {
+          id: rawDepartment.id,
+          name: rawDepartment.name,
+          code: rawDepartment.code,
+        }
+      : undefined;
+  const name =
+    [member.name, user.name, member.fullName]
+      .find(
+        (field): field is string =>
+          typeof field === "string" && Boolean(field.trim()),
+      )
+      ?.trim() || "Unnamed Faculty";
+  const email =
+    [member.email, user.email]
+      .find(
+        (field): field is string =>
+          typeof field === "string" && Boolean(field.trim()),
+      )
+      ?.trim() || "";
+
+  if (typeof member.id !== "string") return null;
+
+  return {
+    id: member.id,
+    employeeId:
+      typeof member.employeeId === "string" ? member.employeeId : undefined,
+    userId:
+      typeof member.userId === "string"
+        ? member.userId
+        : typeof user.id === "string"
+          ? user.id
+          : "",
+    name,
+    email,
+    phone:
+      typeof member.phone === "string"
+        ? member.phone
+        : typeof user.phone === "string"
+          ? user.phone
+          : undefined,
+    departmentId:
+      typeof member.departmentId === "string"
+        ? member.departmentId
+        : department?.id || "",
+    designation:
+      typeof member.designation === "string" ? member.designation : "",
+    specialization:
+      typeof member.specialization === "string"
+        ? member.specialization
+        : undefined,
+    joiningDate:
+      typeof member.joiningDate === "string" ? member.joiningDate : undefined,
+    department,
+    user:
+      typeof user.id === "string" &&
+      typeof user.name === "string" &&
+      typeof user.email === "string"
+        ? {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: typeof user.role === "string" ? user.role : "FACULTY",
+            status: typeof user.status === "string" ? user.status : "ACTIVE",
+          }
+        : undefined,
+  };
+}
+
 async function fetchAdminDetail<T>(
   url: string,
   fallbackError: string,
@@ -73,7 +161,7 @@ async function fetchAdminDetail<T>(
 export async function fetchAdminDashboardStats(): Promise<AdminDashboardStats> {
   try {
     const res =
-      await apiFetch<ApiResponse<AdminDashboardStats>>("/api/v1/admin/dashboard");
+      await apiFetch<ApiResponse<AdminDashboardStats>>("/admin/dashboard");
     if (res?.data) return res.data;
   } catch (err) {
     console.warn("fetchAdminDashboardStats using fallback mock:", err);
@@ -83,7 +171,7 @@ export async function fetchAdminDashboardStats(): Promise<AdminDashboardStats> {
 
 export async function fetchAdminStudent(id: string): Promise<AdminStudent> {
   return fetchAdminDetail<AdminStudent>(
-    `/api/v1/admin/students/${encodeURIComponent(id)}`,
+    `/admin/students/${encodeURIComponent(id)}`,
     "Failed to fetch student",
   );
 }
@@ -95,7 +183,7 @@ export async function fetchAdminFacultyMember(
   id: string,
 ): Promise<AdminFacultyMember> {
   return fetchAdminDetail<AdminFacultyMember>(
-    `/api/v1/admin/faculty/${encodeURIComponent(id)}`,
+    `/admin/faculty/${encodeURIComponent(id)}`,
     "Failed to fetch faculty member",
   );
 }
@@ -107,7 +195,7 @@ export async function fetchAdminDepartment(
   id: string,
 ): Promise<AdminDepartment> {
   return fetchAdminDetail<AdminDepartment>(
-    `/api/v1/admin/departments/${encodeURIComponent(id)}`,
+    `/admin/departments/${encodeURIComponent(id)}`,
     "Failed to fetch department",
   );
 }
@@ -116,7 +204,7 @@ export const fetchAdminDepartmentDetail = fetchAdminDepartment;
 
 export async function fetchAdminProgram(id: string): Promise<AdminProgram> {
   return fetchAdminDetail<AdminProgram>(
-    `/api/v1/admin/programs/${encodeURIComponent(id)}`,
+    `/admin/programs/${encodeURIComponent(id)}`,
     "Failed to fetch program",
   );
 }
@@ -125,7 +213,7 @@ export const fetchAdminProgramDetail = fetchAdminProgram;
 
 export async function fetchAdminCourse(id: string): Promise<AdminCourse> {
   return fetchAdminDetail<AdminCourse>(
-    `/api/v1/admin/courses/${encodeURIComponent(id)}`,
+    `/admin/courses/${encodeURIComponent(id)}`,
     "Failed to fetch course",
   );
 }
@@ -134,7 +222,7 @@ export const fetchAdminCourseDetail = fetchAdminCourse;
 
 export async function fetchAdminSemester(id: string): Promise<AdminSemester> {
   return fetchAdminDetail<AdminSemester>(
-    `/api/v1/admin/semesters/${encodeURIComponent(id)}`,
+    `/admin/semesters/${encodeURIComponent(id)}`,
     "Failed to fetch semester",
   );
 }
@@ -143,7 +231,7 @@ export const fetchAdminSemesterDetail = fetchAdminSemester;
 
 export async function fetchAdminSection(id: string): Promise<AdminSection> {
   return fetchAdminDetail<AdminSection>(
-    `/api/v1/admin/sections/${encodeURIComponent(id)}`,
+    `/admin/sections/${encodeURIComponent(id)}`,
     "Failed to fetch section",
   );
 }
@@ -154,7 +242,7 @@ export async function fetchAdminEnrollment(
   id: string,
 ): Promise<AdminEnrollment> {
   return fetchAdminDetail<AdminEnrollment>(
-    `/api/v1/admin/enrollments/${encodeURIComponent(id)}`,
+    `/admin/enrollments/${encodeURIComponent(id)}`,
     "Failed to fetch enrollment",
   );
 }
@@ -163,7 +251,7 @@ export const fetchAdminEnrollmentDetail = fetchAdminEnrollment;
 
 export async function fetchAdminPayment(id: string): Promise<AdminPayment> {
   return fetchAdminDetail<AdminPayment>(
-    `/api/v1/admin/payments/${encodeURIComponent(id)}`,
+    `/admin/payments/${encodeURIComponent(id)}`,
     "Failed to fetch payment",
   );
 }
@@ -182,7 +270,7 @@ export async function fetchAdminStudents(
     if (params?.search) query.set("search", params.search);
 
     const queryString = query.toString();
-    const url = `/api/v1/admin/students${queryString ? `?${queryString}` : ""}`;
+    const url = `/admin/students${queryString ? `?${queryString}` : ""}`;
     const res = await apiFetch<unknown>(url);
     const arr = extractArray<AdminStudent>(res);
     if (arr !== null) return arr;
@@ -214,7 +302,7 @@ export async function createAdminStudent(
   payload: CreateStudentPayload,
 ): Promise<AdminStudent> {
   try {
-    const res = await apiFetch<ApiResponse<AdminStudent>>("/api/v1/admin/students", {
+    const res = await apiFetch<ApiResponse<AdminStudent>>("/admin/students", {
       method: "POST",
       body: payload,
     });
@@ -268,7 +356,7 @@ export async function updateAdminStudent(
 ): Promise<AdminStudent> {
   try {
     const res = await apiFetch<ApiResponse<AdminStudent>>(
-      `/api/v1/admin/students/${id}`,
+      `/admin/students/${id}`,
       {
         method: "PATCH",
         body: payload,
@@ -303,7 +391,7 @@ export async function deleteAdminStudent(
 ): Promise<{ success: boolean; message: string }> {
   try {
     const res = await apiFetch<{ success: boolean; message: string }>(
-      `/api/v1/admin/students/${id}${hard ? "?hard=true" : ""}`,
+      `/admin/students/${id}${hard ? "?hard=true" : ""}`,
       { method: "DELETE" },
     );
     if (res) return res;
@@ -337,10 +425,14 @@ export async function fetchAdminFaculty(params?: {
     if (params?.search) query.set("search", params.search);
     const qs = query.toString();
     const res = await apiFetch<unknown>(
-      `/api/v1/admin/faculty${qs ? `?${qs}` : ""}`,
+      `/admin/faculty${qs ? `?${qs}` : ""}`,
     );
     const arr = extractArray<AdminFacultyMember>(res);
-    if (arr !== null) return arr;
+    if (arr !== null) {
+      return arr
+        .map(normalizeAdminFacultyMember)
+        .filter((member): member is AdminFacultyMember => member !== null);
+    }
   } catch (err) {
     console.warn("fetchAdminFaculty fallback:", err);
   }
@@ -352,7 +444,7 @@ export async function createAdminFaculty(
 ): Promise<AdminFacultyMember> {
   try {
     const res = await apiFetch<ApiResponse<AdminFacultyMember>>(
-      "/api/v1/admin/faculty",
+      "/admin/faculty",
       {
         method: "POST",
         body: payload,
@@ -392,7 +484,7 @@ export async function updateAdminFaculty(
   payload: Partial<CreateFacultyPayload> & { photoUrl?: string },
 ): Promise<AdminFacultyMember> {
   const res = await apiFetch<ApiResponse<AdminFacultyMember>>(
-    `/api/v1/admin/faculty/${id}`,
+    `/admin/faculty/${id}`,
     { method: "PATCH", body: payload },
   );
   if (res?.data) return res.data;
@@ -404,7 +496,7 @@ export async function deleteAdminFaculty(
   hard = false,
 ): Promise<{ success: boolean; message: string }> {
   const res = await apiFetch<{ success: boolean; message: string }>(
-    `/api/v1/admin/faculty/${id}${hard ? "?hard=true" : ""}`,
+    `/admin/faculty/${id}${hard ? "?hard=true" : ""}`,
     { method: "DELETE" },
   );
   return res ?? { success: true, message: "Faculty deactivated" };
@@ -414,7 +506,7 @@ export async function deleteAdminFaculty(
 
 export async function fetchAdminDepartments(): Promise<AdminDepartment[]> {
   try {
-    const res = await apiFetch<unknown>("/api/v1/admin/departments");
+    const res = await apiFetch<unknown>("/admin/departments");
     const arr = extractArray<AdminDepartment>(res);
     if (arr !== null) return arr;
   } catch (err) {
@@ -428,7 +520,7 @@ export async function createAdminDepartment(
 ): Promise<AdminDepartment> {
   try {
     const res = await apiFetch<ApiResponse<AdminDepartment>>(
-      "/api/v1/admin/departments",
+      "/admin/departments",
       {
         method: "POST",
         body: payload,
@@ -454,7 +546,7 @@ export async function createAdminDepartment(
 }
 
 export async function deleteAdminDepartment(id: string): Promise<void> {
-  await apiFetch(`/api/v1/admin/departments/${id}`, { method: "DELETE" });
+  await apiFetch(`/admin/departments/${id}`, { method: "DELETE" });
 }
 
 export async function updateAdminDepartment(
@@ -463,7 +555,7 @@ export async function updateAdminDepartment(
 ): Promise<AdminDepartment> {
   try {
     const res = await apiFetch<ApiResponse<AdminDepartment>>(
-      `/api/v1/admin/departments/${id}`,
+      `/admin/departments/${id}`,
       {
         method: "PATCH",
         body: payload,
@@ -486,7 +578,7 @@ export async function updateAdminDepartment(
 
 export async function fetchAdminPrograms(): Promise<AdminProgram[]> {
   try {
-    const res = await apiFetch<unknown>("/api/v1/admin/programs");
+    const res = await apiFetch<unknown>("/admin/programs");
     const arr = extractArray<AdminProgram>(res);
     if (arr !== null) return arr;
   } catch (err) {
@@ -499,7 +591,7 @@ export async function createAdminProgram(
   payload: CreateProgramPayload,
 ): Promise<AdminProgram> {
   try {
-    const res = await apiFetch<ApiResponse<AdminProgram>>("/api/v1/admin/programs", {
+    const res = await apiFetch<ApiResponse<AdminProgram>>("/admin/programs", {
       method: "POST",
       body: payload,
     });
@@ -527,7 +619,7 @@ export async function updateAdminProgram(
   payload: Partial<CreateProgramPayload>,
 ): Promise<AdminProgram> {
   const res = await apiFetch<ApiResponse<AdminProgram>>(
-    `/api/v1/admin/programs/${id}`,
+    `/admin/programs/${id}`,
     { method: "PATCH", body: payload },
   );
   if (res?.data) return res.data;
@@ -538,7 +630,7 @@ export async function updateAdminProgram(
 
 export async function fetchAdminCourses(): Promise<AdminCourse[]> {
   try {
-    const res = await apiFetch<unknown>("/api/v1/admin/courses");
+    const res = await apiFetch<unknown>("/admin/courses");
     const arr = extractArray<AdminCourse>(res);
     if (arr !== null) return arr;
   } catch (err) {
@@ -551,29 +643,28 @@ export async function createAdminCourse(
   payload: CreateCoursePayload,
 ): Promise<AdminCourse> {
   try {
-    const res = await apiFetch<ApiResponse<AdminCourse>>("/api/v1/admin/courses", {
+    const res = await apiFetch<ApiResponse<AdminCourse>>("/admin/courses", {
       method: "POST",
       body: payload,
     });
     if (res?.data) return res.data;
-  } catch (err) {
-    console.warn("createAdminCourse fallback:", err);
+    throw new Error(
+      res?.message || "The server did not return the created course.",
+    );
+  } catch (error: unknown) {
+    const err = error as {
+      data?: { message?: string };
+      response?: { _data?: { message?: string }; status?: number };
+      message?: string;
+    };
+    const message =
+      err.data?.message ||
+      err.response?._data?.message ||
+      (err.response?.status === 409
+        ? "A course with this code or details already exists. Use a unique course code."
+        : err.message);
+    throw new Error(message || "Failed to create course.");
   }
-
-  const newCourse: AdminCourse = {
-    id: `course-${Date.now()}`,
-    code: payload.code,
-    title: payload.title,
-    description: payload.description,
-    credit: payload.credit,
-    departmentId: payload.departmentId,
-    programId: payload.programId,
-    department: mockAdminDepartments.find((d) => d.id === payload.departmentId),
-    program: mockAdminPrograms.find((p) => p.id === payload.programId),
-    createdAt: new Date().toISOString(),
-  };
-  mockAdminCourses.unshift(newCourse);
-  return newCourse;
 }
 
 export async function updateAdminCourse(
@@ -581,7 +672,7 @@ export async function updateAdminCourse(
   payload: Partial<CreateCoursePayload>,
 ): Promise<AdminCourse> {
   const res = await apiFetch<ApiResponse<AdminCourse>>(
-    `/api/v1/admin/courses/${id}`,
+    `/admin/courses/${id}`,
     { method: "PATCH", body: payload },
   );
   if (res?.data) return res.data;
@@ -592,7 +683,7 @@ export async function updateAdminCourse(
 
 export async function fetchAdminSemesters(): Promise<AdminSemester[]> {
   try {
-    const res = await apiFetch<unknown>("/api/v1/admin/semesters");
+    const res = await apiFetch<unknown>("/admin/semesters");
     const arr = extractArray<AdminSemester>(res);
     if (arr !== null) return arr;
   } catch (err) {
@@ -605,7 +696,7 @@ export async function createAdminSemester(
   payload: CreateSemesterPayload,
 ): Promise<AdminSemester> {
   try {
-    const res = await apiFetch<ApiResponse<AdminSemester>>("/api/v1/admin/semesters", {
+    const res = await apiFetch<ApiResponse<AdminSemester>>("/admin/semesters", {
       method: "POST",
       body: payload,
     });
@@ -631,7 +722,7 @@ export async function updateAdminSemester(
   payload: Partial<CreateSemesterPayload>,
 ): Promise<AdminSemester> {
   const res = await apiFetch<ApiResponse<AdminSemester>>(
-    `/api/v1/admin/semesters/${id}`,
+    `/admin/semesters/${id}`,
     { method: "PATCH", body: payload },
   );
   if (res?.data) return res.data;
@@ -642,7 +733,7 @@ export async function updateAdminSemester(
 
 export async function fetchAdminSections(): Promise<AdminSection[]> {
   try {
-    const res = await apiFetch<unknown>("/api/v1/admin/sections");
+    const res = await apiFetch<unknown>("/admin/sections");
     const arr = extractArray<AdminSection>(res);
     if (arr !== null) return arr;
   } catch (err) {
@@ -655,7 +746,7 @@ export async function createAdminSection(
   payload: CreateSectionPayload,
 ): Promise<AdminSection> {
   try {
-    const res = await apiFetch<ApiResponse<AdminSection>>("/api/v1/admin/sections", {
+    const res = await apiFetch<ApiResponse<AdminSection>>("/admin/sections", {
       method: "POST",
       body: payload,
     });
@@ -690,7 +781,7 @@ export async function updateAdminSection(
   payload: Partial<CreateSectionPayload>,
 ): Promise<AdminSection> {
   const res = await apiFetch<ApiResponse<AdminSection>>(
-    `/api/v1/admin/sections/${id}`,
+    `/admin/sections/${id}`,
     { method: "PATCH", body: payload },
   );
   if (res?.data) return res.data;
@@ -701,7 +792,7 @@ export async function updateAdminSection(
 
 export async function fetchAdminEnrollments(): Promise<AdminEnrollment[]> {
   try {
-    const res = await apiFetch<unknown>("/api/v1/admin/enrollments");
+    const res = await apiFetch<unknown>("/admin/enrollments");
     const arr = extractArray<AdminEnrollment>(res);
     if (arr !== null) return arr;
   } catch (err) {
@@ -715,7 +806,7 @@ export async function forceEnrollStudent(
 ): Promise<AdminEnrollment> {
   try {
     const res = await apiFetch<ApiResponse<AdminEnrollment>>(
-      "/api/v1/admin/enrollments",
+      "/admin/enrollments",
       {
         method: "POST",
         body: payload,
@@ -776,7 +867,7 @@ export async function forceEnrollStudent(
 
 export async function fetchAdminPayments(): Promise<AdminPayment[]> {
   try {
-    const res = await apiFetch<unknown>("/api/v1/admin/payments");
+    const res = await apiFetch<unknown>("/admin/payments");
     const arr = extractArray<AdminPayment>(res);
     if (arr !== null) return arr;
   } catch (err) {
@@ -790,7 +881,7 @@ export async function fetchAdminPayments(): Promise<AdminPayment[]> {
 export async function fetchAdminReports(): Promise<AdminSystemReport> {
   try {
     const res =
-      await apiFetch<ApiResponse<AdminSystemReport>>("/api/v1/admin/reports");
+      await apiFetch<ApiResponse<AdminSystemReport>>("/admin/reports");
     if (res?.data) return res.data;
   } catch (err) {
     console.warn("fetchAdminReports fallback:", err);

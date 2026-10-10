@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
 import { AdminDepartmentsView } from "@/components/admin/departments/admin-departments-view";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Departments | University Admin",

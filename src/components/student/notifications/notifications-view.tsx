@@ -240,7 +240,9 @@ export function NotificationsView() {
     },
   });
 
-  const notifications = apiNotifications ?? demoFallback ?? [];
+  const notifications = Array.isArray(apiNotifications)
+    ? apiNotifications
+    : (demoFallback ?? []);
   const unreadCount = notifications.filter((n) => !n.isRead).length;
   const displayed = showUnreadOnly
     ? notifications.filter((n) => !n.isRead)

@@ -9,7 +9,6 @@ import {
   FileChartColumnIcon,
   FileTextIcon,
   GraduationCap,
-  LayoutDashboardIcon,
   SearchIcon,
   Settings2Icon,
   UsersIcon,
@@ -54,14 +53,6 @@ const documents = [
   { name: "Profile", url: "/faculty/profile", icon: <UsersIcon /> },
 ];
 
-// Faculty sidebar uses a placeholder user — the real data
-// is fetched inside the dashboard via TanStack Query.
-const user = {
-  name: "Faculty Member",
-  email: "faculty@university.edu",
-  avatar: "/avatars/shadcn.jpg",
-};
-
 export function FacultySidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar>) {
@@ -88,7 +79,7 @@ export function FacultySidebar({
       </SidebarContent>
 
       <SidebarFooter>
-        <NavUser user={user} />
+        <NavUser userRole="FACULTY" />
       </SidebarFooter>
     </Sidebar>
   );

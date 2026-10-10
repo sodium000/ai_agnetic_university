@@ -12,7 +12,7 @@ import {
   Search,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -74,7 +74,8 @@ export function AdminCoursesView() {
       queryClient.invalidateQueries({ queryKey: ["admin", "courses"] });
       setCreateOpen(false);
     },
-    onError: (err: any) => toast.error(err.message || "Failed to create course"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to create course"),
   });
 
   const filteredCourses = courses.filter((c) => {
@@ -217,13 +218,21 @@ function CourseFormDialog({
   onClose: () => void;
 }) {
   const [form, setForm] = useState<CreateCoursePayload>({
-    code: "CSE301",
-    title: "Data Structures",
-    description: "Fundamental data structures and algorithms",
-    credit: 3.0,
-    departmentId: departments[0]?.id || "dept-cse",
-    programId: programs[0]?.id || "prog-bsc-cse",
+    code: "",
+    title: "",
+    description: "",
+    credit: 3,
+    departmentId: "",
+    programId: "",
   });
+
+  useEffect(() => {
+    setForm((current) => ({
+      ...current,
+      departmentId: current.departmentId || departments[0]?.id || "",
+      programId: current.programId || programs[0]?.id || "",
+    }));
+  }, [departments, programs]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -247,7 +247,7 @@ export function AdminDashboard() {
                       </div>
                       <div
                         style={{ height: `${heightPercent}%` }}
-                        className="w-full rounded-t-md bg-gradient-to-t from-primary/80 to-primary transition-all group-hover:from-primary group-hover:to-primary/90"
+                        className="w-full rounded-t-md bg-linear-to-t from-primary/80 to-primary transition-all group-hover:from-primary group-hover:to-primary/90"
                       />
                       <span className="text-[11px] font-medium text-muted-foreground">
                         {item.month}
