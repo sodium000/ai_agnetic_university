@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAMES } from "@/lib/auth";
 
 const API_BASE =
+  process.env.BACKEND_API_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:5000";

@@ -1,9 +1,12 @@
 import { type FetchOptions, ofetch } from "ofetch";
 
-export const API_BASE_URL =
+const BACKEND_API_URL =
+  process.env.BACKEND_API_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:5000";
+  process.env.NEXT_PUBLIC_API_URL ||"https://ai-agentic-university.vercel.app"||"http://localhost:5000";
+
+export const API_BASE_URL =
+  typeof window === "undefined" ? BACKEND_API_URL : "/api/backend";
 
 const rawApiFetch = ofetch.create({
   baseURL: API_BASE_URL,

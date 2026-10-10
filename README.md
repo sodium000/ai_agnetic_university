@@ -92,6 +92,13 @@ legacy `NEXT_PUBLIC_API_URL`) and defaults to `http://localhost:5000`. The API
 client includes cookies and attempts to refresh a session after an eligible
 `401` response.
 
+In the browser, API requests are sent through the frontend's same-origin
+`/api/backend` route. This lets the frontend own the authentication cookies
+even when the backend is on a separate Vercel domain. Configure
+`BACKEND_API_URL` on the frontend deployment to point to the backend; the
+`NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_API_URL` variables remain supported
+as compatibility fallbacks.
+
 The backend is maintained as a separate project. Its README, environment
 template, and detailed endpoint reference are in that backend repository.
 
@@ -173,9 +180,9 @@ npm run build
 npm run start
 ```
 
-Set `NEXT_PUBLIC_API_BASE_URL` to the deployed API URL at build time. The
-backend must also allow the deployed frontend origin for credentialed
-cross-origin requests and use secure cookie settings over HTTPS.
+Set `BACKEND_API_URL` to the deployed API URL in the frontend project's Vercel
+environment variables. The same-origin proxy makes browser API requests through
+the frontend host, so browser CORS access to the backend is not required.
 
 ## Environment configuration
 
@@ -185,6 +192,7 @@ cross-origin requests and use secure cookie settings over HTTPS.
 | --- | --- | --- |
 | `NEXT_PUBLIC_API_BASE_URL` | No | Backend API base URL; defaults to `http://localhost:5000` |
 | `NEXT_PUBLIC_API_URL` | No | Legacy alternative to `NEXT_PUBLIC_API_BASE_URL` |
+| `BACKEND_API_URL` | Recommended for deployment | Server-side backend URL used by the same-origin API proxy |
 
 Use one API URL variable, preferably `NEXT_PUBLIC_API_BASE_URL`.
 
