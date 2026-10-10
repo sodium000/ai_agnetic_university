@@ -37,11 +37,25 @@ import {
 import { fetchFacultyProfile } from "@/services/faculty.service";
 import { fetchStudentProfile } from "@/services/student-profile.service";
 
-export function NavUser({ userRole }: { userRole: AuthUser["role"] }) {
+type NavUserProps =
+  | { userRole: AuthUser["role"]; user?: never }
+  | {
+      user: { name: string; email: string; avatar: string };
+      userRole?: never;
+    };
+
+export function NavUser(props: NavUserProps) {
+  const userRole = "userRole" in props ? props.userRole : undefined;
+  const fallbackUser = "user" in props ? props.user : undefined;
   const [user, setUser] = useState<AuthUser | null>(null);
   const { isMobile } = useSidebar();
 
   useEffect(() => {
+    if (!userRole) {
+      setUser(null);
+      return;
+    }
+
     let cancelled = false;
     const cachedUser = getStoredAuthenticatedUser();
     const isMatchingRole =
@@ -81,8 +95,9 @@ export function NavUser({ userRole }: { userRole: AuthUser["role"] }) {
     };
   }, [userRole]);
 
-  const displayName = user?.name || "User account";
-  const avatar = user?.photoUrl || "";
+  const displayName = user?.name || fallbackUser?.name || "User account";
+  const displayEmail = user?.email || fallbackUser?.email || "";
+  const avatar = user?.photoUrl || fallbackUser?.avatar || "";
 
   return (
     <SidebarMenu>
@@ -102,7 +117,7 @@ export function NavUser({ userRole }: { userRole: AuthUser["role"] }) {
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">{displayName}</span>
               <span className="truncate text-xs text-foreground/70">
-                {user?.email || ""}
+                {displayEmail}
               </span>
             </div>
             <EllipsisVerticalIcon className="ml-auto size-4" />
@@ -125,7 +140,7 @@ export function NavUser({ userRole }: { userRole: AuthUser["role"] }) {
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-medium">{displayName}</span>
                     <span className="truncate text-xs text-muted-foreground">
-                      {user?.email || ""}
+                      {displayEmail}
                     </span>
                   </div>
                 </div>
