@@ -252,10 +252,25 @@ export const fetchCurrentUser = fetchUserInfo;
 export const getCurrentUser = fetchUserInfo;
 
 export async function forgotPassword(email: string) {
-  return await apiFetchFirst(
-    ["/api/v1/auth/forgot-password", "/api/v1/forgot-password"],
-    { method: "POST", body: { email } },
-  );
+  try {
+    const response = await apiFetch<{
+      success: boolean;
+      message: string;
+    }>("/auth/api/v1/forgot-password", {
+      method: "POST",
+      body: { email },
+    });
+    if (!response.success) {
+      throw new Error(
+        response.message || "Unable to send password reset code.",
+      );
+    }
+    return response.message;
+  } catch (error: unknown) {
+    throw new Error(
+      getAuthErrorMessage(error, "Unable to send password reset code."),
+    );
+  }
 }
 
 export async function resetPassword(payload: {
@@ -263,8 +278,19 @@ export async function resetPassword(payload: {
   otp: string;
   newPassword: string;
 }) {
-  return await apiFetchFirst(
-    ["/api/v1/auth/reset-password", "/api/v1/reset-password"],
-    { method: "POST", body: payload },
-  );
+  try {
+    const response = await apiFetch<{
+      success: boolean;
+      message: string;
+    }>("/auth/api/v1/reset-password", {
+      method: "POST",
+      body: payload,
+    });
+    if (!response.success) {
+      throw new Error(response.message || "Unable to reset password.");
+    }
+    return response.message;
+  } catch (error: unknown) {
+    throw new Error(getAuthErrorMessage(error, "Unable to reset password."));
+  }
 }
