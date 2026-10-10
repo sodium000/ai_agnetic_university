@@ -11,12 +11,19 @@ export async function POST(request: NextRequest) {
   const cookieStore = await cookies();
 
   try {
-    await fetch(`${API_BASE}/api/v1/logout`, {
-      method: "POST",
-      headers: {
-        cookie: request.headers.get("cookie") ?? "",
-      },
-    });
+    const cookieHeader = request.headers.get("cookie") ?? "";
+    const logoutPaths = ["/api/v1/auth/logout", "/api/v1/logout"];
+    for (const path of logoutPaths) {
+      try {
+        const res = await fetch(`${API_BASE}${path}`, {
+          method: "POST",
+          headers: { cookie: cookieHeader },
+        });
+        if (res.ok) break;
+      } catch {
+        // try next path
+      }
+    }
   } catch {
     // Always clear cookies on this app even if the API is unreachable.
   }

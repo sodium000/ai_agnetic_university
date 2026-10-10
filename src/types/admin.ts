@@ -264,6 +264,7 @@ export interface SectionSchedule {
 
 export interface AdminSection {
   id: string;
+  name?: string;
   courseId: string;
   semesterId: string;
   facultyId?: string;
@@ -276,6 +277,7 @@ export interface AdminSection {
 }
 
 export interface CreateSectionPayload {
+  name: string;
   courseId: string;
   semesterId: string;
   facultyId: string;

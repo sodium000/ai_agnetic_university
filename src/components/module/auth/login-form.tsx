@@ -21,6 +21,7 @@ import {
   getRoleFromAccessToken,
   getSafeRedirectPath,
   normalizeRole,
+  persistRoleCookie,
 } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { loginUser } from "@/services/auth.service";
@@ -55,15 +56,7 @@ export function LoginForm({
         const role =
           normalizeRole(data?.user?.role) ??
           getRoleFromAccessToken(data?.accessToken);
-
-        // Persist a normalized role cookie so the proxy can route returning users.
-        if (role) {
-          const expires = new Date(
-            Date.now() + 7 * 24 * 60 * 60 * 1000,
-          ).toUTCString();
-          document.cookie = `userRole=${role}; path=/; expires=${expires}; SameSite=Lax`;
-        }
-
+        persistRoleCookie(role);
         const destination = getSafeRedirectPath(role, nextUrl);
 
         // Force browser page reload so proxy.ts picks up the fresh cookies
@@ -228,7 +221,7 @@ export function LoginForm({
                     size="sm"
                     className="text-xs h-8 cursor-pointer border-dashed"
                     onClick={() => {
-                      form.setFieldValue("email", "sterlingmarcus871@gmail.com");
+                      form.setFieldValue("email", "raisultonmoy.dev@gmail.com");
                       form.setFieldValue("password", "Password123!");
                     }}
                   >

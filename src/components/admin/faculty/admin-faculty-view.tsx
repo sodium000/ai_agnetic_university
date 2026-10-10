@@ -62,7 +62,7 @@ export function AdminFacultyView() {
     refetch,
   } = useQuery({
     queryKey: ["admin", "faculty"],
-    queryFn: fetchAdminFaculty,
+    queryFn: () => fetchAdminFaculty(),
   });
 
   const createMutation = useMutation({

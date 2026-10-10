@@ -103,6 +103,36 @@ export async function fetchStudentPayments(): Promise<StudentPayment[]> {
   throw new Error(response?.message || "Failed to load payments history");
 }
 
+export async function fetchStudentInvoiceDetail(
+  invoiceId: string,
+): Promise<StudentInvoice> {
+  const response = await apiFetch<{
+    success?: boolean;
+    message?: string;
+    data?: StudentInvoice;
+  }>(`/api/v1/student/me/invoices/${encodeURIComponent(invoiceId)}`);
+
+  if (response?.data) return response.data;
+  throw new Error(response?.message || "Failed to load invoice detail");
+}
+
+export const fetchStudentInvoice = fetchStudentInvoiceDetail;
+
+export async function fetchStudentPaymentDetail(
+  paymentId: string,
+): Promise<StudentPayment> {
+  const response = await apiFetch<{
+    success?: boolean;
+    message?: string;
+    data?: StudentPayment;
+  }>(`/api/v1/student/me/payments/${encodeURIComponent(paymentId)}`);
+
+  if (response?.data) return response.data;
+  throw new Error(response?.message || "Failed to load payment detail");
+}
+
+export const fetchStudentPayment = fetchStudentPaymentDetail;
+
 /**
  * POST /api/v1/student/me/payments/checkout
  * Creates a Stripe hosted checkout session for paying an invoice.

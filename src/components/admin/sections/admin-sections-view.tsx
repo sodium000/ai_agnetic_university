@@ -78,7 +78,7 @@ export function AdminSectionsView() {
 
   const { data: faculty = [] } = useQuery({
     queryKey: ["admin", "faculty"],
-    queryFn: fetchAdminFaculty,
+    queryFn: () => fetchAdminFaculty(),
   });
 
   const {
@@ -257,6 +257,7 @@ function SectionFormDialog({
   isLoading: boolean;
   onClose: () => void;
 }) {
+  const [name, setName] = useState("Section A");
   const [courseId, setCourseId] = useState(courses[0]?.id || "course-cse301");
   const [semesterId, setSemesterId] = useState(semesters[0]?.id || "sem-fall-2026");
   const [facultyId, setFacultyId] = useState(faculty[0]?.id || "fac-1");
@@ -300,11 +301,12 @@ function SectionFormDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!courseId || !semesterId || !facultyId || capacity <= 0) {
+    if (!name.trim() || !courseId || !semesterId || !facultyId || capacity <= 0) {
       toast.error("Please fill in required fields.");
       return;
     }
     onSubmit({
+      name: name.trim(),
       courseId,
       semesterId,
       facultyId,
@@ -315,6 +317,14 @@ function SectionFormDialog({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+      <div className="space-y-1.5">
+        <Label>Section name *</Label>
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Section A"
+        />
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label>Select Course *</Label>

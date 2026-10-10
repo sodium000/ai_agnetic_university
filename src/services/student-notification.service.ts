@@ -23,6 +23,20 @@ export async function fetchNotifications(
   throw new Error(response?.message || "Failed to load notifications");
 }
 
+export async function fetchNotificationDetail(
+  id: string,
+): Promise<Notification> {
+  const response = await apiFetch<MarkReadApiResponse>(
+    `/api/v1/student/me/notifications/${encodeURIComponent(id)}`,
+  );
+  if (response?.data) {
+    return response.data;
+  }
+  throw new Error(response?.message || "Failed to load notification");
+}
+
+export const fetchNotification = fetchNotificationDetail;
+
 /**
  * PATCH /api/v1/student/me/notifications/:id/read
  * Marks a specific notification as read.

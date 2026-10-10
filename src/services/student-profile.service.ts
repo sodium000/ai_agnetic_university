@@ -56,6 +56,9 @@ export async function fetchStudentProfile(): Promise<StudentProfile> {
   throw new Error(response?.message || "Invalid profile response from server");
 }
 
+export const fetchStudentProfileDetail = fetchStudentProfile;
+export const fetchCurrentStudentProfile = fetchStudentProfile;
+
 /**
  * Update a specific profile field on the backend.
  * Endpoint: PATCH /api/v1/student/me

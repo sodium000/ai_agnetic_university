@@ -1,4 +1,4 @@
-import apiFetch from "@/lib/apiClient";
+import apiFetch, { apiFetchFirst } from "@/lib/apiClient";
 
 export interface LoginPayload {
   email: string;
@@ -10,6 +10,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role: "STUDENT" | "FACULTY" | "ADMIN" | "SUPER_ADMIN";
+  status?: string;
 }
 
 export interface LoginApiResponse {
@@ -24,29 +25,15 @@ export interface LoginApiResponse {
 }
 
 /**
- * POST /api/v1/login
- * User login — sets HttpOnly cookies on the browser and returns tokens/user
+ * POST /api/v1/auth/login
  */
 export async function loginUser(
   payload: LoginPayload,
 ): Promise<LoginApiResponse["data"]> {
-  let response: LoginApiResponse;
-  try {
-    response = await apiFetch<LoginApiResponse>("/api/v1/login", {
-      method: "POST",
-      body: payload,
-    });
-  } catch (primaryErr: unknown) {
-    // If backend mounted on /auth/api/v1/login, fallback gracefully
-    try {
-      response = await apiFetch<LoginApiResponse>("/auth/api/v1/login", {
-        method: "POST",
-        body: payload,
-      });
-    } catch {
-      throw primaryErr;
-    }
-  }
+  const response = await apiFetchFirst<LoginApiResponse>(
+    ["/api/v1/auth/login", "/api/v1/login"],
+    { method: "POST", body: payload },
+  );
 
   if (response?.data?.user || response?.data?.accessToken) {
     return response.data;
@@ -56,8 +43,7 @@ export async function loginUser(
 }
 
 /**
- * POST /api/auth/logout (Next.js) → backend /api/v1/logout
- * Clears accessToken, refreshToken, and userRole on this origin.
+ * POST /api/auth/logout (Next.js) → backend /api/v1/auth/logout
  */
 export async function logoutUser(): Promise<void> {
   try {
@@ -69,17 +55,16 @@ export async function logoutUser(): Promise<void> {
 }
 
 /**
- * POST /api/v1/refresh-token
- * Refreshes the accessToken using the refreshToken cookie
+ * POST /api/v1/auth/refresh-token
  */
 export async function refreshAccessToken(): Promise<{
   accessToken: string;
   refreshToken?: string;
 }> {
-  const response = await apiFetch<{
+  const response = await apiFetchFirst<{
     success: boolean;
     data: { accessToken: string; refreshToken?: string };
-  }>("/api/v1/refresh-token", {
+  }>(["/api/v1/auth/refresh-token", "/api/v1/refresh-token"], {
     method: "POST",
   });
   return response.data;
@@ -97,10 +82,6 @@ export interface VerifyOtpPayload {
   otp: string;
 }
 
-/**
- * Step 1: POST /api/v1/auth/register
- * Sends 6-digit OTP to the user's email and saves pending info in Redis
- */
 export async function registerUser(payload: RegisterPayload) {
   try {
     return await apiFetch("/api/v1/auth/register", {
@@ -109,31 +90,25 @@ export async function registerUser(payload: RegisterPayload) {
     });
   } catch (error: unknown) {
     const err = error as { data?: { message?: string }; message?: string };
-    const msg = err?.data?.message || err?.message || "Registration failed";
-    throw new Error(msg);
+    throw new Error(err?.data?.message || err?.message || "Registration failed");
   }
 }
 
-/**
- * Step 2: POST /api/v1/auth/verifyUser
- * Verifies 6-digit OTP against Redis and creates the account
- */
-export async function verifyRegistrationOtp(payload: VerifyOtpPayload) {
+export async function verifyRegistrationOtp(
+  payload: VerifyOtpPayload,
+): Promise<LoginApiResponse["data"] | null> {
   try {
-    return await apiFetch("/api/v1/auth/verifyUser", {
-      method: "POST",
-      body: payload,
-    });
+    const response = await apiFetch<LoginApiResponse>(
+      "/api/v1/auth/verifyUser",
+      { method: "POST", body: payload },
+    );
+    return response?.data ?? null;
   } catch (error: unknown) {
     const err = error as { data?: { message?: string }; message?: string };
-    const msg = err?.data?.message || err?.message || "Invalid OTP";
-    throw new Error(msg);
+    throw new Error(err?.data?.message || err?.message || "Invalid OTP");
   }
 }
 
-/**
- * Resend OTP — calls Step 1 to send a fresh code to email
- */
 export async function resendRegistrationOtp(email: string) {
   try {
     return await apiFetch("/api/v1/auth/register", {
@@ -142,44 +117,35 @@ export async function resendRegistrationOtp(email: string) {
     });
   } catch (error: unknown) {
     const err = error as { data?: { message?: string }; message?: string };
-    const msg = err?.data?.message || err?.message || "Unable to resend OTP";
-    throw new Error(msg);
+    throw new Error(err?.data?.message || err?.message || "Unable to resend OTP");
   }
 }
 
-/**
- * GET /api/v1/me/:userId
- * Retrieves user info for a given ID
- */
 export async function fetchUserInfo(userId: string): Promise<AuthUser> {
-  const response = await apiFetch<{ success: boolean; data: AuthUser }>(
+  const response = await apiFetchFirst<{ success: boolean; data: AuthUser }>([
+    `/api/v1/auth/me/${encodeURIComponent(userId)}`,
     `/api/v1/me/${encodeURIComponent(userId)}`,
-  );
+  ]);
   return response.data;
 }
 
-/**
- * POST /api/v1/forgot-password
- * Sends password reset OTP to user email
- */
+export const fetchCurrentUser = fetchUserInfo;
+export const getCurrentUser = fetchUserInfo;
+
 export async function forgotPassword(email: string) {
-  return await apiFetch("/api/v1/forgot-password", {
-    method: "POST",
-    body: { email },
-  });
+  return await apiFetchFirst(
+    ["/api/v1/auth/forgot-password", "/api/v1/forgot-password"],
+    { method: "POST", body: { email } },
+  );
 }
 
-/**
- * POST /api/v1/reset-password
- * Resets password with verified OTP
- */
 export async function resetPassword(payload: {
   email: string;
   otp: string;
   newPassword: string;
 }) {
-  return await apiFetch("/api/v1/reset-password", {
-    method: "POST",
-    body: payload,
-  });
+  return await apiFetchFirst(
+    ["/api/v1/auth/reset-password", "/api/v1/reset-password"],
+    { method: "POST", body: payload },
+  );
 }

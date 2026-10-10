@@ -1,3 +1,4 @@
+import { persistRoleCookie } from "@/lib/auth";
 import apiFetch from "@/lib/apiClient";
 import type {
   AssignmentSubmission,
@@ -21,6 +22,17 @@ import type {
   UpdateFacultyProfilePayload,
 } from "@/types/faculty";
 
+async function fetchFacultyDetail<T>(
+  url: string,
+  fallbackError: string,
+): Promise<T> {
+  const res = await apiFetch<{ data?: T; message?: string }>(url);
+  if (res && typeof res === "object" && "data" in res && res.data !== undefined) {
+    return res.data as T;
+  }
+  throw new Error(res?.message || fallbackError);
+}
+
 // ── Profile ───────────────────────────────────────────────────────────────────
 
 export async function fetchFacultyProfile(): Promise<FacultyProfile> {
@@ -41,14 +53,133 @@ export async function updateFacultyProfile(
 }
 
 export async function createFacultyProfile(
-  payload: Partial<FacultyProfile>,
+  payload: Partial<FacultyProfile> & {
+    departmentId?: string;
+    designation?: string;
+    specialization?: string;
+    joiningDate?: string;
+    phone?: string;
+    photoUrl?: string;
+  },
 ): Promise<FacultyProfile> {
-  const res = await apiFetch<FacultyProfileApiResponse>("/api/v1/faculty/me", {
+  const res = await apiFetch<{
+    data?:
+      | FacultyProfile
+      | {
+          accessToken?: string;
+          refreshToken?: string;
+          faculty?: FacultyProfile;
+        };
+    message?: string;
+  }>("/api/v1/faculty/me", {
     method: "POST",
     body: payload,
   });
-  if (res?.data) return res.data;
+
+  const data = res?.data;
+  if (data && "faculty" in data && data.faculty) {
+    persistRoleCookie("FACULTY");
+    try {
+      return await fetchFacultyProfile();
+    } catch {
+      return data.faculty;
+    }
+  }
+  if (data && "id" in data && data.id) return data as FacultyProfile;
   throw new Error(res?.message || "Failed to create faculty profile");
+}
+
+export async function fetchFacultySectionDetail(id: string): Promise<{
+  assignments?: FacultyAssignment[];
+  exams?: FacultyExam[];
+} & Partial<Section>> {
+  const res = await apiFetch<{
+    data: { assignments?: FacultyAssignment[]; exams?: FacultyExam[] } & Partial<Section>;
+    message?: string;
+  }>(`/api/v1/faculty/sections/${encodeURIComponent(id)}`);
+  if (res?.data) return res.data;
+  throw new Error(res?.message || "Failed to fetch section detail");
+}
+
+export async function fetchFacultyStudent(id: string): Promise<TaughtStudent> {
+  return fetchFacultyDetail<TaughtStudent>(
+    `/api/v1/faculty/students/${encodeURIComponent(id)}`,
+    "Failed to fetch faculty student",
+  );
+}
+
+export const fetchFacultyStudentDetail = fetchFacultyStudent;
+
+export async function fetchFacultyAssignments(): Promise<FacultyAssignment[]> {
+  try {
+    const res = await apiFetch<AssignmentsApiResponse>(
+      "/api/v1/faculty/me/assignments",
+    );
+    if (Array.isArray(res?.data)) return res.data;
+  } catch {
+    // List endpoint is optional — fall back to section details.
+  }
+
+  const sections = await fetchFacultySections();
+  const details = await Promise.all(
+    sections.map((s) => fetchFacultySectionDetail(s.id).catch(() => null)),
+  );
+  const assignments: FacultyAssignment[] = [];
+  for (const detail of details) {
+    if (!detail?.assignments) continue;
+    for (const assignment of detail.assignments) {
+      assignments.push({
+        ...assignment,
+        section:
+          assignment.section ??
+          (detail.name
+            ? {
+                name: detail.name,
+                course: detail.course
+                  ? { code: detail.course.code, title: detail.course.title }
+                  : undefined,
+              }
+            : assignment.section),
+      });
+    }
+  }
+  return assignments;
+}
+
+export async function fetchFacultyExams(): Promise<FacultyExam[]> {
+  try {
+    const res = await apiFetch<{ data: FacultyExam[] }>(
+      "/api/v1/faculty/me/exams",
+    );
+    if (Array.isArray(res?.data)) return res.data;
+  } catch {
+    // List endpoint is optional — fall back to section details.
+  }
+
+  const sections = await fetchFacultySections();
+  const details = await Promise.all(
+    sections.map((s) => fetchFacultySectionDetail(s.id).catch(() => null)),
+  );
+  const exams: FacultyExam[] = [];
+  for (const detail of details) {
+    if (!detail?.exams) continue;
+    for (const exam of detail.exams) {
+      exams.push({
+        ...exam,
+        section:
+          exam.section ??
+          (detail.name
+            ? {
+                name: detail.name,
+                course: detail.course
+                  ? { code: detail.course.code, title: detail.course.title }
+                  : undefined,
+              }
+            : exam.section),
+      });
+    }
+  }
+  return exams;
 }
 
 // ── Sections ──────────────────────────────────────────────────────────────────
@@ -158,6 +289,17 @@ function normalizeTaughtStudent(raw: unknown): TaughtStudent | null {
 
 // ── Assignments ───────────────────────────────────────────────────────────────
 
+export async function fetchFacultyAssignment(
+  id: string,
+): Promise<FacultyAssignment> {
+  return fetchFacultyDetail<FacultyAssignment>(
+    `/api/v1/faculty/assignments/${encodeURIComponent(id)}`,
+    "Failed to fetch assignment",
+  );
+}
+
+export const fetchFacultyAssignmentDetail = fetchFacultyAssignment;
+
 export async function createAssignment(
   payload: CreateAssignmentPayload,
 ): Promise<FacultyAssignment> {
@@ -195,6 +337,15 @@ export async function fetchAssignmentSubmissions(
 }
 
 // ── Exams ─────────────────────────────────────────────────────────────────────
+
+export async function fetchFacultyExam(id: string): Promise<FacultyExam> {
+  return fetchFacultyDetail<FacultyExam>(
+    `/api/v1/faculty/exams/${encodeURIComponent(id)}`,
+    "Failed to fetch exam",
+  );
+}
+
+export const fetchFacultyExamDetail = fetchFacultyExam;
 
 export async function createExam(
   payload: CreateExamPayload,

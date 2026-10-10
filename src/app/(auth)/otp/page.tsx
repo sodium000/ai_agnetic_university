@@ -27,6 +27,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
+  getRoleFromAccessToken,
+  getSafeRedirectPath,
+  normalizeRole,
+  persistRoleCookie,
+} from "@/lib/auth";
+import {
   resendRegistrationOtp,
   verifyRegistrationOtp,
 } from "@/services/auth.service";
@@ -116,13 +122,24 @@ function VerifyOtpContent() {
 
       try {
         setError("");
-        await verifyRegistrationOtp({
+        const data = await verifyRegistrationOtp({
           email: targetEmail,
           otp: value.otp,
         });
 
         if (typeof window !== "undefined") {
           sessionStorage.removeItem("registrationEmail");
+        }
+
+        const role =
+          normalizeRole(data?.user?.role) ??
+          getRoleFromAccessToken(data?.accessToken);
+
+        if (role) {
+          persistRoleCookie(role);
+          toast.success("Account created successfully!");
+          window.location.href = getSafeRedirectPath(role);
+          return;
         }
 
         toast.success("Account verified successfully! Please log in.");

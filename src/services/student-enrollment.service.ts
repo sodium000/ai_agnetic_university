@@ -307,6 +307,19 @@ export async function fetchEnrolledCourses(
   throw new Error(response?.message || "Failed to load enrolled courses");
 }
 
+export async function fetchStudentCourseDetail(
+  courseId: string,
+): Promise<EnrolledCourseEnrollment> {
+  const response = await apiFetch<{ data?: EnrolledCourseEnrollment; message?: string }>(
+    `/api/v1/student/me/courses/${encodeURIComponent(courseId)}`,
+  );
+
+  if (response?.data) return response.data;
+  throw new Error(response?.message || "Failed to load course detail");
+}
+
+export const fetchStudentCourse = fetchStudentCourseDetail;
+
 /**
  * POST /api/v1/student/me/enrollments
  * Enrolls the student in a specific course section. Duplicate enrollments are rejected.
@@ -359,6 +372,21 @@ export async function fetchStudentEnrollments() {
   return response?.data || [];
 }
 
+export async function fetchStudentEnrollmentDetail(
+  enrollmentId: string,
+): Promise<EnrolledCourseEnrollment> {
+  const response = await apiFetch<{
+    success?: boolean;
+    message?: string;
+    data?: EnrolledCourseEnrollment;
+  }>(`/api/v1/student/me/enrollments/${encodeURIComponent(enrollmentId)}`);
+
+  if (response?.data) return response.data;
+  throw new Error(response?.message || "Failed to load enrollment detail");
+}
+
+export const fetchStudentEnrollment = fetchStudentEnrollmentDetail;
+
 /**
  * GET /api/v1/student/me/schedule
  * Returns class and exam schedules
@@ -403,18 +431,27 @@ export async function fetchStudentAssignments() {
   return response?.data || [];
 }
 
+export async function fetchStudentAssignmentDetail(assignmentId: string) {
+  const response = await apiFetch<{ success?: boolean; message?: string; data?: unknown }>(
+    `/api/v1/student/me/assignments/${encodeURIComponent(assignmentId)}`,
+  );
+
+  if (response?.data) return response.data;
+  throw new Error(response?.message || "Failed to load assignment detail");
+}
+
 /**
- * POST /api/v1/student/me/assignments
- * Submit an assignment
+ * POST /api/v1/student/me/assignments/:id/submit
  */
 export async function submitStudentAssignment(
-  payload: Record<string, unknown> | BodyInit,
+  assignmentId: string,
+  fileUrl: string,
 ) {
   const response = await apiFetch<{ success: boolean; data: unknown }>(
-    "/api/v1/student/me/assignments",
+    `/api/v1/student/me/assignments/${encodeURIComponent(assignmentId)}/submit`,
     {
       method: "POST",
-      body: payload,
+      body: { fileUrl },
     },
   );
   return response?.data;

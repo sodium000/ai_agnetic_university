@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import {
   createExam,
+  fetchFacultyExams,
   fetchFacultySections,
   mockExams,
   mockSections,
@@ -250,7 +251,7 @@ function ExamFormDialog({
 }
 
 export function FacultyExamsView() {
-  const [demoData, setDemoData] = useState<FacultyExam[]>(mockExams);
+  const [demoData, setDemoData] = useState<FacultyExam[] | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: sections } = useQuery({
@@ -259,6 +260,13 @@ export function FacultyExamsView() {
     retry: 1,
   });
 
+  const { data: apiExams } = useQuery({
+    queryKey: ["faculty-exams"],
+    queryFn: fetchFacultyExams,
+    retry: 1,
+  });
+
+  const exams = demoData ?? apiExams ?? mockExams;
   const sectionList = sections ?? mockSections;
 
   return (
@@ -307,15 +315,17 @@ export function FacultyExamsView() {
                 course: { code: s.course.code },
               }))}
               onClose={() => setDialogOpen(false)}
-              onSuccess={(e) => setDemoData((prev) => [e, ...prev])}
+              onSuccess={(e) =>
+                setDemoData((prev) => [e, ...(prev ?? apiExams ?? [])])
+              }
             />
           </DialogContent>
         </Dialog>
       </div>
 
-      {demoData.length > 0 ? (
+      {exams.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {demoData.map((e) => (
+          {exams.map((e) => (
             <ExamCard key={e.id} exam={e} />
           ))}
         </div>

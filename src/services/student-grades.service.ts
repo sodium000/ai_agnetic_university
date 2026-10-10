@@ -193,15 +193,111 @@ export const mockGradesData: GradesApiData = {
  * GET /api/v1/student/me/results
  * Returns student academic results and GPA data.
  */
+function mapResultRow(row: Record<string, unknown>, index: number): StudentResult {
+  const course = (row.course ?? {}) as Record<string, unknown>;
+  const exam = (row.exam ?? {}) as Record<string, unknown>;
+  const type = String(row.type ?? exam.type ?? "FINAL").toUpperCase();
+
+  return {
+    id: String(row.id ?? `res-${index}`),
+    courseCode: String(row.courseCode ?? course.code ?? "—"),
+    courseName: String(row.courseName ?? course.title ?? "Course"),
+    credit: Number(row.credit ?? course.credit ?? 0),
+    marks: Number(row.marks ?? 0),
+    grade: String(row.grade ?? "—"),
+    gradePoint: Number(row.gradePoint ?? 0),
+    semester: String(row.semester ?? ""),
+    semesterYear: Number(row.semesterYear ?? 0),
+    type: (type === "MIDTERM" || type === "QUIZ" ? type : "FINAL") as StudentResult["type"],
+  };
+}
+
+function normalizeGradesPayload(data: unknown): GradesApiData | null {
+  if (!data) return null;
+
+  if (Array.isArray(data)) {
+    const results = data.map((row, i) =>
+      mapResultRow((row ?? {}) as Record<string, unknown>, i),
+    );
+    const gradeDistribution = Object.entries(
+      results.reduce<Record<string, number>>((acc, r) => {
+        acc[r.grade] = (acc[r.grade] ?? 0) + 1;
+        return acc;
+      }, {}),
+    ).map(([grade, count]) => ({ grade, count }));
+
+    const gpAvg =
+      results.length > 0
+        ? results.reduce((sum, r) => sum + r.gradePoint, 0) / results.length
+        : 0;
+
+    return {
+      cgpa: Number(gpAvg.toFixed(2)),
+      totalCreditsEarned: results.reduce((sum, r) => sum + (r.credit || 0), 0),
+      totalCreditsRequired: 0,
+      results,
+      semesterGPA: [],
+      gradeDistribution,
+    };
+  }
+
+  if (typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    if (Array.isArray(obj.results) || typeof obj.cgpa === "number") {
+      const results = Array.isArray(obj.results)
+        ? obj.results.map((row, i) =>
+            mapResultRow((row ?? {}) as Record<string, unknown>, i),
+          )
+        : [];
+      return {
+        cgpa: Number(obj.cgpa ?? 0),
+        totalCreditsEarned: Number(obj.totalCreditsEarned ?? 0),
+        totalCreditsRequired: Number(obj.totalCreditsRequired ?? 0),
+        results,
+        semesterGPA: Array.isArray(obj.semesterGPA)
+          ? (obj.semesterGPA as SemesterGPA[])
+          : [],
+        gradeDistribution: Array.isArray(obj.gradeDistribution)
+          ? (obj.gradeDistribution as GradeDistribution[])
+          : [],
+      };
+    }
+  }
+
+  return null;
+}
+
 export async function fetchStudentGrades(): Promise<GradesApiData> {
-  const response = await apiFetch<GradesApiResponse>(
+  const response = await apiFetch<GradesApiResponse | { data: unknown }>(
     "/api/v1/student/me/results",
   );
-  if (response?.data) {
-    return response.data;
-  }
-  throw new Error(response?.message || "Failed to load grades data");
+  const normalized = normalizeGradesPayload(response?.data);
+  if (normalized) return normalized;
+  throw new Error(
+    (response as GradesApiResponse)?.message || "Failed to load grades data",
+  );
 }
+
+export async function fetchStudentGradeDetail(resultId: string): Promise<StudentResult> {
+  const response = await apiFetch<{
+    success?: boolean;
+    message?: string;
+    data?: StudentResult | Record<string, unknown>;
+  }>(`/api/v1/student/me/results/${encodeURIComponent(resultId)}`);
+
+  const detail = response?.data;
+  if (!detail) {
+    throw new Error(response?.message || "Failed to load grade detail");
+  }
+
+  if (typeof detail === "object" && !Array.isArray(detail)) {
+    return mapResultRow(detail as Record<string, unknown>, 0);
+  }
+
+  throw new Error(response?.message || "Failed to load grade detail");
+}
+
+export const fetchStudentResult = fetchStudentGradeDetail;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

@@ -42,6 +42,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
   createAssignment,
+  fetchFacultyAssignments,
   fetchFacultySections,
   mockAssignments,
   mockSections,
@@ -82,7 +83,7 @@ function AssignmentCard({
         <div className="flex items-start justify-between gap-2">
           <div className="space-y-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <CardTitle className="text-sm font-semibold truncate max-w-[280px]">
+              <CardTitle className="text-sm font-semibold truncate max-w-70">
                 {assignment.title}
               </CardTitle>
               <Badge
@@ -294,21 +295,26 @@ export function FacultyAssignmentsView() {
     retry: 1,
   });
 
-  // We store assignments in query cache; they come from sections + endpoints
-  // For now: use mockAssignments as demo, real implementations use the service
-  const assignments = demoData ?? mockAssignments;
+  const { data: apiAssignments } = useQuery({
+    queryKey: ["faculty-assignments"],
+    queryFn: fetchFacultyAssignments,
+    retry: 1,
+  });
+
+  const assignments = demoData ?? apiAssignments ?? mockAssignments;
   const sectionList = sections ?? mockSections;
 
   const handleSaved = (a: FacultyAssignment) => {
+    queryClient.invalidateQueries({ queryKey: ["faculty-assignments"] });
     setDemoData((prev) => {
-      if (!prev) return [a];
-      const idx = prev.findIndex((x) => x.id === a.id);
+      const base = prev ?? apiAssignments ?? [];
+      const idx = base.findIndex((x) => x.id === a.id);
       if (idx >= 0) {
-        const next = [...prev];
+        const next = [...base];
         next[idx] = a;
         return next;
       }
-      return [a, ...prev];
+      return [a, ...base];
     });
   };
 

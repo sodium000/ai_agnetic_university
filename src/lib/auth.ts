@@ -105,6 +105,14 @@ export function getSafeRedirectPath(
   return home;
 }
 
+export function persistRoleCookie(role?: string | null) {
+  const normalized = normalizeRole(role);
+  if (typeof document === "undefined" || !normalized) return;
+
+  const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+  document.cookie = `userRole=${normalized}; path=/; expires=${expires}; SameSite=Lax`;
+}
+
 export function clearBrowserAuthCookies() {
   if (typeof document === "undefined") return;
 
@@ -112,3 +120,6 @@ export function clearBrowserAuthCookies() {
     document.cookie = `${name}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
   }
 }
+
+/** @deprecated use getRoleFromAccessToken */
+export const getRoleFromToken = getRoleFromAccessToken;
