@@ -1,10 +1,10 @@
 "use client";
 
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Calendar, Check, Users, X } from "lucide-react";
+import { ArrowLeft, Calendar, Check, Users } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 import {
   fetchFacultySections,
   fetchFacultyStudents,
-  mockSections,
   recordAttendance,
 } from "@/services/faculty.service";
 import type { AttendanceStatus, TaughtStudent } from "@/types/faculty";
@@ -33,22 +32,53 @@ function AttendanceContent() {
   const searchParams = useSearchParams();
   const initSection = searchParams.get("sectionId") ?? "";
 
-  const { data: sections } = useQuery({
+  const {
+    data: sections,
+    isLoading: sectionsLoading,
+    isError: sectionsError,
+    error: sectionsErrorDetails,
+  } = useQuery({
     queryKey: ["faculty-sections"],
     queryFn: () => fetchFacultySections(),
     retry: 1,
   });
 
-  const sectionList = sections ?? mockSections;
-  const [selectedSection, setSelectedSection] = useState(initSection || sectionList[0]?.id || "");
+  const sectionList = sections ?? [];
+  const [selectedSection, setSelectedSection] = useState(initSection);
+  const activeSection = sectionList.some((section) => section.id === selectedSection)
+    ? selectedSection
+    : "";
+
+  useEffect(() => {
+    if (!sections) return;
+    const selectedSectionExists = sections.some(
+      (section) => section.id === selectedSection,
+    );
+    if (selectedSectionExists) return;
+
+    const initialSectionExists = sections.some(
+      (section) => section.id === initSection,
+    );
+    setSelectedSection(
+      initialSectionExists ? initSection : (sections[0]?.id ?? ""),
+    );
+  }, [sections, selectedSection, initSection]);
+
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [attendance, setAttendance] = useState<AttendanceMap>({});
-  const [submitted, setSubmitted] = useState(false);
+  const [recordedStudentIdsByDate, setRecordedStudentIdsByDate] = useState<
+    Record<string, string[]>
+  >({});
 
-  const { data: students, isLoading } = useQuery({
-    queryKey: ["faculty-students", selectedSection],
-    queryFn: () => fetchFacultyStudents({ sectionId: selectedSection }),
-    enabled: Boolean(selectedSection),
+  const {
+    data: students,
+    isLoading,
+    isError: studentsError,
+    error: studentsErrorDetails,
+  } = useQuery({
+    queryKey: ["faculty-students", activeSection],
+    queryFn: () => fetchFacultyStudents({ sectionId: activeSection }),
+    enabled: Boolean(activeSection),
     retry: 1,
   });
 
@@ -66,20 +96,43 @@ function AttendanceContent() {
 
   const mutation = useMutation({
     mutationFn: () => {
-      const records = studentList.map((s) => ({
-        studentId: s.id,
-        status: attendance[s.id] ?? "PRESENT",
-      }));
-      return recordAttendance(selectedSection, { date, records });
+      if (!activeSection) {
+        throw new Error("Select one of your assigned sections first.");
+      }
+      const alreadyRecorded = new Set(recordedStudentIdsByDate[date] ?? []);
+      const records = studentList
+        .filter((student) => !alreadyRecorded.has(student.id))
+        .map((student) => ({
+          studentId: student.id,
+          status: attendance[student.id] ?? "PRESENT",
+        }));
+      if (records.length === 0) {
+        throw new Error("Attendance has already been recorded for these students today.");
+      }
+      return recordAttendance(activeSection, { date, records });
     },
-    onSuccess: (data) => {
-      toast.success(`Attendance recorded for ${data.recorded} students on ${data.date}`);
-      setSubmitted(true);
+    onSuccess: (result) => {
+      setRecordedStudentIdsByDate((previous) => ({
+        ...previous,
+        [result.date]: [
+          ...new Set([
+            ...(previous[result.date] ?? []),
+            ...result.recordedStudentIds,
+          ]),
+        ],
+      }));
+      const skippedMessage =
+        result.alreadyRecorded > 0
+          ? ` (${result.alreadyRecorded} already recorded)`
+          : "";
+      toast.success(
+        `Attendance recorded for ${result.recorded} students on ${result.date}${skippedMessage}`,
+      );
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to record attendance."),
   });
 
-  const sectionInfo = sectionList.find((s) => s.id === selectedSection);
+  const sectionInfo = sectionList.find((s) => s.id === activeSection);
   const presentCount = Object.values(attendance).filter((v) => v === "PRESENT").length;
   const absentCount = Object.values(attendance).filter((v) => v === "ABSENT").length;
   const lateCount = Object.values(attendance).filter((v) => v === "LATE").length;
@@ -105,9 +158,17 @@ function AttendanceContent() {
             <select
               id="att-section"
               className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              value={selectedSection}
-              onChange={(e) => { setSelectedSection(e.target.value); setAttendance({}); setSubmitted(false); }}
+              value={activeSection}
+              disabled={sectionsLoading || sectionsError || sectionList.length === 0}
+              onChange={(e) => { setSelectedSection(e.target.value); setAttendance({}); }}
             >
+              {sectionList.length === 0 && (
+                <option value="">
+                  {sectionsLoading
+                    ? "Loading sections..."
+                    : "No assigned sections"}
+                </option>
+              )}
               {sectionList.map((s) => (
                 <option key={s.id} value={s.id}>{s.course.code} — {s.name}</option>
               ))}
@@ -125,8 +186,22 @@ function AttendanceContent() {
         </CardContent>
       </Card>
 
+      {sectionsError && (
+        <p role="alert" className="text-sm text-destructive">
+          {sectionsErrorDetails instanceof Error
+            ? sectionsErrorDetails.message
+            : "Failed to load your assigned sections."}
+        </p>
+      )}
+
+      {!sectionsLoading && !sectionsError && sectionList.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          No sections are assigned to your faculty account yet.
+        </p>
+      )}
+
       {/* Students */}
-      {selectedSection && (
+      {activeSection && (
         <Card className="border-border/80 shadow-xs">
           <CardHeader className="pb-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -157,6 +232,12 @@ function AttendanceContent() {
               Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="h-14 animate-pulse rounded-lg bg-muted" />
               ))
+            ) : studentsError ? (
+              <p role="alert" className="py-10 text-center text-sm text-destructive">
+                {studentsErrorDetails instanceof Error
+                  ? studentsErrorDetails.message
+                  : "Failed to load students for this section."}
+              </p>
             ) : studentList.length > 0 ? (
               studentList.map((student) => {
                 const current = attendance[student.id];
@@ -208,13 +289,20 @@ function AttendanceContent() {
               <div className="flex justify-end pt-2">
                 <Button
                   onClick={() => mutation.mutate()}
-                  disabled={mutation.isPending || submitted}
+                  disabled={
+                    mutation.isPending ||
+                    studentList.every((student) =>
+                      (recordedStudentIdsByDate[date] ?? []).includes(student.id),
+                    )
+                  }
                   className="gap-2 text-xs cursor-pointer"
                 >
-                  {submitted ? (
-                    <><Check className="size-3.5" /> Submitted</>
-                  ) : mutation.isPending ? (
+                  {mutation.isPending ? (
                     "Submitting..."
+                  ) : studentList.every((student) =>
+                      (recordedStudentIdsByDate[date] ?? []).includes(student.id),
+                    ) ? (
+                    <><Check className="size-3.5" /> Already recorded today</>
                   ) : (
                     <><Calendar className="size-3.5" /> Submit Attendance</>
                   )}

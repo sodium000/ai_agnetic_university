@@ -4,7 +4,6 @@ import type {
   AssignmentSubmission,
   AssignmentsApiResponse,
   AssignmentApiResponse,
-  AttendanceApiResponse,
   CreateAssignmentPayload,
   CreateExamPayload,
   ExamApiResponse,
@@ -149,7 +148,7 @@ export async function fetchFacultyAssignments(): Promise<FacultyAssignment[]> {
 export async function fetchFacultyExams(): Promise<FacultyExam[]> {
   try {
     const res = await apiFetch<{ data: FacultyExam[] }>(
-      "/api/v1/faculty/me/exams",
+      "/api/v1/faculty/exams",
     );
     if (Array.isArray(res?.data)) return res.data;
   } catch {
@@ -363,13 +362,72 @@ export async function createExam(
 export async function recordAttendance(
   sectionId: string,
   payload: RecordAttendancePayload,
-): Promise<{ recorded: number; date: string }> {
-  const res = await apiFetch<AttendanceApiResponse>(
+): Promise<{
+  recorded: number;
+  alreadyRecorded: number;
+  recordedStudentIds: string[];
+  date: string;
+}> {
+  const records = [
+    ...new Map(payload.records.map((record) => [record.studentId, record])).values(),
+  ];
+  if (records.length === 0) {
+    throw new Error("Select at least one student before submitting attendance.");
+  }
+
+  const res = await apiFetch<{
+    success?: boolean;
+    statusCode?: number;
+    message?: string;
+    data?: unknown;
+  }>(
     `/api/v1/faculty/sections/${encodeURIComponent(sectionId)}/attendance`,
-    { method: "POST", body: payload },
+    { method: "POST", body: { ...payload, records } },
   );
-  if (res?.data) return res.data;
-  throw new Error(res?.message || "Failed to record attendance");
+  if (res?.success === false) {
+    throw new Error(res.message || "Failed to record attendance");
+  }
+
+  const responseData =
+    res?.data && typeof res.data === "object"
+      ? (res.data as Record<string, unknown>)
+      : {};
+  const rawTotalRecorded =
+    responseData.totalRecorded ?? responseData.recorded ?? responseData.count;
+  const recorded =
+    typeof rawTotalRecorded === "number" && Number.isFinite(rawTotalRecorded)
+      ? rawTotalRecorded
+      : records.length;
+  const rawAlreadyRecorded = responseData.alreadyRecorded;
+  const alreadyRecorded =
+    typeof rawAlreadyRecorded === "number" && Number.isFinite(rawAlreadyRecorded)
+      ? rawAlreadyRecorded
+      : 0;
+  const createdRecords = Array.isArray(responseData.records)
+    ? responseData.records.filter(
+        (record): record is Record<string, unknown> =>
+          typeof record === "object" && record !== null,
+      )
+    : [];
+  const recordedStudentIds = createdRecords
+    .map((record) => record.studentId)
+    .filter((studentId): studentId is string => typeof studentId === "string");
+  const date =
+    typeof responseData.date === "string" && responseData.date
+      ? responseData.date.slice(0, 10)
+      : payload.date;
+
+  return {
+    recorded,
+    alreadyRecorded,
+    recordedStudentIds:
+      recordedStudentIds.length > 0
+        ? recordedStudentIds
+        : alreadyRecorded === 0
+          ? records.map((record) => record.studentId)
+          : [],
+    date,
+  };
 }
 
 export async function correctAttendance(
@@ -521,7 +579,7 @@ export const mockAssignments: FacultyAssignment[] = [
     title: "Lab Report 1 – ER Diagram Design",
     description:
       "Design a complete ER diagram for a hospital management system.",
-    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 5).toISOString(),
+    deadline: "2026-11-01T23:59:00.000Z",
     totalMarks: 100,
     section: {
       name: "Section 01",
@@ -533,7 +591,7 @@ export const mockAssignments: FacultyAssignment[] = [
     sectionId: "sec-cse311-a",
     title: "Project Milestone 1 – API Design",
     description: "Submit a RESTful API specification using OpenAPI 3.0.",
-    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 8).toISOString(),
+    deadline: "2026-11-04T23:59:00.000Z",
     totalMarks: 50,
     section: {
       name: "Section 01",
@@ -548,7 +606,7 @@ export const mockAssignments: FacultyAssignment[] = [
     sectionId: "sec-cse421-a",
     title: "ML Assignment 1 – Linear Regression",
     description: "Implement linear regression from scratch using numpy.",
-    deadline: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+    deadline: "2026-10-08T23:59:00.000Z",
     totalMarks: 80,
     section: {
       name: "Section 01",
@@ -563,7 +621,7 @@ export const mockExams: FacultyExam[] = [
     sectionId: "sec-cse301-a",
     title: "Midterm Exam 2026",
     type: "MIDTERM",
-    examDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14).toISOString(),
+    examDate: "2026-10-24T19:00:00.000Z",
     totalMarks: 50,
     section: {
       name: "Section 01",
@@ -575,7 +633,7 @@ export const mockExams: FacultyExam[] = [
     sectionId: "sec-cse311-a",
     title: "Quiz 1 – REST APIs",
     type: "QUIZ",
-    examDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString(),
+    examDate: "2026-10-13T19:00:00.000Z",
     totalMarks: 20,
     section: {
       name: "Section 01",

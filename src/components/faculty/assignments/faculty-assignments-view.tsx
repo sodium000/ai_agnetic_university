@@ -16,7 +16,7 @@ import {
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -53,17 +53,21 @@ import type {
   FacultyAssignment,
 } from "@/types/faculty";
 
-function formatDeadline(iso: string) {
+function formatDeadline(iso: string, now: number | null) {
   const d = new Date(iso);
-  const now = new Date();
-  const isPast = d < now;
+  const isPast = now !== null && d.getTime() < now;
   return {
     label: d.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
+      timeZone: now === null ? "UTC" : undefined,
     }),
-    time: d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+    time: d.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: now === null ? "UTC" : undefined,
+    }),
     isPast,
   };
 }
@@ -75,7 +79,13 @@ function AssignmentCard({
   assignment: FacultyAssignment;
   onEdit: (a: FacultyAssignment) => void;
 }) {
-  const { label, time, isPast } = formatDeadline(assignment.deadline);
+  const [now, setNow] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
+
+  const { label, time, isPast } = formatDeadline(assignment.deadline, now);
 
   return (
     <Card className="border-border/80 shadow-xs hover:shadow-md transition-all duration-200">

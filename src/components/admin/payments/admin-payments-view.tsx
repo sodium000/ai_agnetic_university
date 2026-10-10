@@ -4,10 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Banknote,
-  CheckCircle2,
   CreditCard,
   Download,
-  Filter,
   RefreshCw,
   Search,
   Wallet,
@@ -27,8 +25,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { fetchAdminPayments } from "@/services/admin.service";
-import type { AdminPayment } from "@/types/admin";
+import {
+  fetchAdminPayments,
+  fetchAdminStudents,
+} from "@/services/admin.service";
+import type { AdminPayment, AdminStudent } from "@/types/admin";
 
 export function AdminPaymentsView() {
   const [search, setSearch] = useState("");
@@ -42,6 +43,10 @@ export function AdminPaymentsView() {
     queryKey: ["admin", "payments"],
     queryFn: fetchAdminPayments,
   });
+  const { data: students = [] } = useQuery({
+    queryKey: ["admin", "students"],
+    queryFn: () => fetchAdminStudents(),
+  });
 
   const payments: AdminPayment[] = Array.isArray(rawPayments)
     ? rawPayments
@@ -51,21 +56,46 @@ export function AdminPaymentsView() {
         ?.data ||
       [];
 
+  const getStudentForPayment = (
+    payment: AdminPayment,
+  ): AdminStudent | undefined => {
+    const identifiers = [
+      payment.studentId,
+      payment.studentCode,
+      payment.student?.studentId,
+    ].filter((id): id is string => typeof id === "string" && id.length > 0);
+    return students.find((student) =>
+      identifiers.some((id) =>
+        [student.id, student.studentId, student.userId].includes(id),
+      ),
+    );
+  };
+
   const filteredPayments = payments.filter((p) => {
+    const matchedStudent = getStudentForPayment(p);
+    const studentName =
+      p.studentName ||
+      p.student?.user?.name ||
+      p.student?.name ||
+      matchedStudent?.user?.name ||
+      "";
+    const studentCode =
+      p.studentCode || matchedStudent?.studentId || p.student?.studentId || "";
     const matchesSearch =
       !search ||
-      p.transactionId.toLowerCase().includes(search.toLowerCase()) ||
-      (p.student?.user.name &&
-        p.student.user.name.toLowerCase().includes(search.toLowerCase())) ||
-      (p.student?.studentId &&
-        p.student.studentId.toLowerCase().includes(search.toLowerCase()));
+      (p.transactionId || "").toLowerCase().includes(search.toLowerCase()) ||
+      studentName.toLowerCase().includes(search.toLowerCase()) ||
+      studentCode.toLowerCase().includes(search.toLowerCase());
 
     const matchesMethod = !methodFilter || p.paymentMethod === methodFilter;
     return matchesSearch && matchesMethod;
   });
 
   const totalCollected = payments.reduce(
-    (sum, p) => (p.status === "PAID" ? sum + p.amount : sum),
+    (sum, p) =>
+      ["PAID", "SUCCESS", "SUCCEEDED", "COMPLETED"].includes(p.status)
+        ? sum + p.amount
+        : sum,
     0,
   );
 
@@ -238,6 +268,7 @@ export function AdminPaymentsView() {
                 <tr>
                   <th className="px-4 py-3">Transaction ID</th>
                   <th className="px-4 py-3">Student Name</th>
+                  <th className="px-4 py-3">Student ID</th>
                   <th className="px-4 py-3">Description</th>
                   <th className="px-4 py-3">Method</th>
                   <th className="px-4 py-3">Amount</th>
@@ -249,7 +280,7 @@ export function AdminPaymentsView() {
                 {isLoading ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="text-center py-12 text-muted-foreground"
                     >
                       Loading payment records...
@@ -258,62 +289,86 @@ export function AdminPaymentsView() {
                 ) : filteredPayments.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="text-center py-12 text-muted-foreground"
                     >
                       No payment records match current criteria.
                     </td>
                   </tr>
                 ) : (
-                  filteredPayments.map((p) => (
-                    <tr
-                      key={p.id}
-                      className="hover:bg-muted/30 transition-colors"
-                    >
-                      <td className="px-4 py-3 font-mono font-medium text-foreground">
-                        {p.transactionId}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-foreground">
-                          {p.student?.user.name || "Student"}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground font-mono">
-                          {p.student?.studentId}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {p.description || "Tuition fee payment"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline" className="text-[10px]">
-                          {p.paymentMethod}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-foreground font-mono">
-                        ৳{p.amount.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[10px]",
-                            p.status === "PAID"
-                              ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
-                              : "bg-destructive/10 text-destructive border-destructive/20",
-                          )}
-                        >
-                          {p.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground font-mono text-[11px]">
-                        {new Date(p.paidAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </td>
-                    </tr>
-                  ))
+                  filteredPayments.map((p) => {
+                    const matchedStudent = getStudentForPayment(p);
+                    const studentName =
+                      p.studentName ||
+                      p.student?.user?.name ||
+                      p.student?.name ||
+                      matchedStudent?.user?.name ||
+                      matchedStudent?.user?.email ||
+                      p.student?.email ||
+                      "Student details unavailable";
+                    const studentCode =
+                      matchedStudent?.studentId ||
+                      p.studentCode ||
+                      p.student?.studentId ||
+                      "—";
+
+                    return (
+                      <tr
+                        key={p.id}
+                        className="hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="px-4 py-3 font-mono font-medium text-foreground">
+                          {p.transactionId}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-foreground">
+                            {studentName}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-muted-foreground">
+                          {studentCode}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {p.description || "Tuition fee payment"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className="text-[10px]">
+                            {p.paymentMethod}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-foreground font-mono">
+                          ৳{p.amount.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px]",
+                              [
+                                "PAID",
+                                "SUCCESS",
+                                "SUCCEEDED",
+                                "COMPLETED",
+                              ].includes(p.status)
+                                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                                : p.status === "PENDING"
+                                  ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                  : "bg-destructive/10 text-destructive border-destructive/20",
+                            )}
+                          >
+                            {p.status}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground font-mono text-[11px]">
+                          {new Date(p.paidAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

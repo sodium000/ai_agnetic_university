@@ -321,13 +321,24 @@ export interface AdminPayment {
   studentId: string;
   amount: number;
   transactionId: string;
-  paymentMethod: "BKASH" | "NAGAD" | "ROCKET" | "BANK_TRANSFER" | "CARD" | "CASH";
-  status: "PAID" | "PENDING" | "FAILED" | "REFUNDED";
+  paymentMethod: string;
+  status:
+    | "PAID"
+    | "SUCCESS"
+    | "SUCCEEDED"
+    | "COMPLETED"
+    | "PENDING"
+    | "FAILED"
+    | "REFUNDED";
   description?: string;
   paidAt: string;
+  studentName?: string;
+  studentCode?: string;
   student?: {
     studentId: string;
-    user: { name: string; email: string };
+    user?: { name: string; email: string };
+    name?: string;
+    email?: string;
     department?: { code: string };
   };
 }

@@ -869,11 +869,128 @@ export async function fetchAdminPayments(): Promise<AdminPayment[]> {
   try {
     const res = await apiFetch<unknown>("/admin/payments");
     const arr = extractArray<AdminPayment>(res);
-    if (arr !== null) return arr;
+    if (arr !== null) {
+      return arr.map((payment) => normalizeAdminPayment(payment));
+    }
   } catch (err) {
     console.warn("fetchAdminPayments fallback:", err);
   }
   return mockAdminPayments;
+}
+
+function normalizeAdminPayment(payment: unknown): AdminPayment {
+  const raw =
+    payment && typeof payment === "object"
+      ? (payment as Record<string, unknown>)
+      : {};
+  const asRecord = (value: unknown): Record<string, unknown> | null =>
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : null;
+  const invoice = asRecord(raw.invoice);
+  const enrollment = asRecord(raw.enrollment);
+  const relations = [
+    asRecord(raw.student),
+    asRecord(raw.studentProfile),
+    asRecord(invoice?.student),
+    asRecord(invoice?.studentProfile),
+    asRecord(enrollment?.student),
+    asRecord(enrollment?.studentProfile),
+  ].filter((record): record is Record<string, unknown> => record !== null);
+  const userRecords = [
+    asRecord(raw.user),
+    ...relations.map((student) => asRecord(student.user)),
+    asRecord(invoice?.user),
+  ].filter((record): record is Record<string, unknown> => record !== null);
+  const name = [
+    raw.studentName,
+    ...relations.map((student) => student.name),
+    ...userRecords.map((user) => user.name),
+  ]
+    .find(
+      (value): value is string =>
+        typeof value === "string" && !!value.trim(),
+    )
+    ?.trim();
+  const email = [
+    ...relations.map((student) => student.email),
+    ...userRecords.map((user) => user.email),
+  ]
+    .find(
+      (value): value is string =>
+        typeof value === "string" && !!value.trim(),
+    )
+    ?.trim();
+  const allowedStatuses: AdminPayment["status"][] = [
+    "PAID",
+    "SUCCESS",
+    "SUCCEEDED",
+    "COMPLETED",
+    "PENDING",
+    "FAILED",
+    "REFUNDED",
+  ];
+  const rawStatus = String(raw.status ?? "PENDING").toUpperCase();
+  const status = allowedStatuses.includes(rawStatus as AdminPayment["status"])
+    ? (rawStatus as AdminPayment["status"])
+    : "PENDING";
+  const method = String(
+    raw.paymentMethod ?? raw.method ?? "CARD",
+  ).toUpperCase();
+  const studentCode = relations
+    .map((student) => student.studentId)
+    .find((value): value is string => typeof value === "string" && !!value);
+  const studentId = String(
+    relations
+      .map((student) => student.id)
+      .find((value): value is string => typeof value === "string" && !!value) ??
+      raw.studentId ??
+      "",
+  );
+  const rawDepartment = relations
+    .map((student) => asRecord(student.department))
+    .find(
+      (department): department is Record<string, unknown> =>
+        department !== null,
+    );
+
+  return {
+    id: String(raw.id ?? raw.paymentId ?? raw.transactionId ?? ""),
+    studentId,
+    amount: Number(raw.amount ?? 0),
+    transactionId: String(
+      raw.transactionId ?? raw.sessionId ?? raw.id ?? raw.paymentId ?? "—",
+    ),
+    paymentMethod: method,
+    status,
+    description:
+      typeof raw.description === "string"
+        ? raw.description
+        : typeof raw.invoiceNo === "string"
+          ? `Invoice ${raw.invoiceNo}`
+          : undefined,
+    paidAt: String(
+      raw.paidAt ?? raw.createdAt ?? raw.paymentDate ?? raw.updatedAt ?? "",
+    ),
+    studentName: name,
+    studentCode,
+    student: {
+      studentId: studentCode ?? "",
+      ...(name || email
+        ? {
+            user: {
+              name: name ?? "",
+              email: email ?? "",
+            },
+          }
+        : {}),
+      name,
+      email,
+      ...(rawDepartment && typeof rawDepartment.code === "string"
+        ? { department: { code: rawDepartment.code } }
+        : {}),
+    },
+  };
 }
 
 // ── Reports ──────────────────────────────────────────────────────────────────

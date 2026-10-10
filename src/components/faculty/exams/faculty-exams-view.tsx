@@ -3,7 +3,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, GraduationCap, Plus, ClipboardList } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +46,14 @@ const examTypeColors: Record<ExamType, string> = {
 
 function ExamCard({ exam }: { exam: FacultyExam }) {
   const date = new Date(exam.examDate);
-  const isPast = date < new Date();
+  const [now, setNow] = useState<number | null>(null);
+
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
+
+  const isPast = now !== null && date.getTime() < now;
+  const timeZone = now === null ? "UTC" : undefined;
 
   return (
     <Card className="border-border/80 shadow-xs hover:shadow-md transition-all duration-200">
@@ -89,6 +96,7 @@ function ExamCard({ exam }: { exam: FacultyExam }) {
               month: "short",
               day: "numeric",
               year: "numeric",
+              timeZone,
             })}
           </span>
         </div>
@@ -98,6 +106,7 @@ function ExamCard({ exam }: { exam: FacultyExam }) {
             {date.toLocaleTimeString("en-US", {
               hour: "2-digit",
               minute: "2-digit",
+              timeZone,
             })}
           </span>
         </div>
