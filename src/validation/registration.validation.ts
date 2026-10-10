@@ -1,5 +1,4 @@
-import z from "zod"
-
+import z from "zod";
 
 const passwordSchema = z
   .string()
@@ -23,18 +22,9 @@ export const registerSchema = z.object({
   phone: z
     .string()
     .min(1, "Phone number is required")
-    .regex(
-      /^(\+8801|01)[3-9]\d{8}$/,
-      "Please enter a valid Bangladeshi phone number"
-    ),
+    .regex(/^01[3-9]\d{8}$/, "Please enter a valid Bangladeshi phone number"),
 
-  photo: z
-    .instanceof(File, {
-      message: "Please select a valid image",
-    })
-    .optional(),
+  password: passwordSchema,
+});
 
-  password: passwordSchema
-})
-
-export type RegisterFormValues = z.infer<typeof registerSchema>
+export type RegisterFormValues = z.infer<typeof registerSchema>;

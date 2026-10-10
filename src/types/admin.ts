@@ -63,6 +63,24 @@ export interface AdminStudent {
   createdAt?: string;
 }
 
+export interface PendingStudentRegistration {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  status: "ACTIVE" | "INACTIVE";
+  createdAt: string;
+}
+
+export interface ApproveStudentRegistrationPayload {
+  departmentId: string;
+  programId: string;
+  admissionYear: number;
+  currentYear: number;
+  currentSemester: number;
+  studentId?: string;
+}
+
 export interface CreateStudentPayload {
   name: string;
   email: string;

@@ -131,6 +131,14 @@ function VerifyOtpContent() {
           sessionStorage.removeItem("registrationEmail");
         }
 
+        if (data?.pendingApproval) {
+          toast.success(
+            "Email verified. Your student account is waiting for administrator approval.",
+          );
+          router.replace("/login");
+          return;
+        }
+
         const role =
           normalizeRole(data?.user?.role) ??
           getRoleFromAccessToken(data?.accessToken);

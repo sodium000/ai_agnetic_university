@@ -52,11 +52,15 @@ import {
   fetchAdminDepartments,
   fetchAdminPrograms,
   fetchAdminStudents,
+  fetchPendingStudentRegistrations,
+  approveStudentRegistration,
   updateAdminStudent,
 } from "@/services/admin.service";
 import type {
   AdminStudent,
+  ApproveStudentRegistrationPayload,
   CreateStudentPayload,
+  PendingStudentRegistration,
   UpdateStudentPayload,
 } from "@/types/admin";
 
@@ -70,6 +74,16 @@ export function AdminStudentsView() {
   const [editTarget, setEditTarget] = useState<AdminStudent | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminStudent | null>(null);
   const [hardDelete, setHardDelete] = useState(false);
+  const [approvalTarget, setApprovalTarget] =
+    useState<PendingStudentRegistration | null>(null);
+  const [approvalForm, setApprovalForm] =
+    useState<ApproveStudentRegistrationPayload>({
+      departmentId: "",
+      programId: "",
+      admissionYear: new Date().getFullYear(),
+      currentYear: 1,
+      currentSemester: 1,
+    });
 
   // Queries
   const { data: departments = [] } = useQuery({
@@ -81,6 +95,12 @@ export function AdminStudentsView() {
     queryKey: ["admin", "programs"],
     queryFn: fetchAdminPrograms,
   });
+
+  const pendingRegistrationsQuery = useQuery({
+    queryKey: ["admin", "pending-student-registrations"],
+    queryFn: fetchPendingStudentRegistrations,
+  });
+  const pendingRegistrations = pendingRegistrationsQuery.data ?? [];
 
   const {
     data: students = [],
@@ -129,6 +149,33 @@ export function AdminStudentsView() {
     onError: (err: any) => toast.error(err.message || "Failed to delete student"),
   });
 
+  const approveMutation = useMutation({
+    mutationFn: ({
+      userId,
+      payload,
+    }: {
+      userId: string;
+      payload: ApproveStudentRegistrationPayload;
+    }) => approveStudentRegistration(userId, payload),
+    onSuccess: (student) => {
+      toast.success(
+        `Student account for ${student.user.name} has been approved.`,
+      );
+      queryClient.invalidateQueries({ queryKey: ["admin", "students"] });
+      queryClient.invalidateQueries({
+        queryKey: ["admin", "pending-student-registrations"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin", "dashboard"] });
+      setApprovalTarget(null);
+    },
+    onError: (error: unknown) =>
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to approve student registration.",
+      ),
+  });
+
   return (
     <main className="flex flex-1 flex-col gap-6 p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
       {/* ── Top Header ────────────────────────────────────────────────────────── */}
@@ -172,6 +219,259 @@ export function AdminStudentsView() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <Card className="border-border/80 shadow-xs">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">
+            Pending Student Registrations ({pendingRegistrations.length})
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Assign each applicant an academic program to create their student profile and activate access.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {pendingRegistrationsQuery.isLoading ? (
+            <p className="py-5 text-center text-sm text-muted-foreground">
+              Loading registration requests...
+            </p>
+          ) : pendingRegistrationsQuery.isError ? (
+            <div className="flex flex-col items-center gap-2 py-5 text-center">
+              <p className="text-sm text-destructive">
+                {pendingRegistrationsQuery.error instanceof Error
+                  ? pendingRegistrationsQuery.error.message
+                  : "Could not load student registration requests."}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => pendingRegistrationsQuery.refetch()}
+              >
+                Retry
+              </Button>
+            </div>
+          ) : pendingRegistrations.length === 0 ? (
+            <p className="py-5 text-center text-sm text-muted-foreground">
+              No student registrations are waiting for approval.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-y bg-muted/50 text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2.5">Applicant</th>
+                    <th className="px-3 py-2.5">Phone</th>
+                    <th className="px-3 py-2.5">Account Status</th>
+                    <th className="px-3 py-2.5">Registered</th>
+                    <th className="px-3 py-2.5 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {pendingRegistrations.map((registration) => (
+                    <tr key={registration.id}>
+                      <td className="px-3 py-3">
+                        <div className="font-medium">{registration.name}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          {registration.email}
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        {registration.phone || "—"}
+                      </td>
+                      <td className="px-3 py-3">
+                        <Badge variant="outline">{registration.status}</Badge>
+                      </td>
+                      <td className="px-3 py-3">
+                        {new Date(registration.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <Button
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => {
+                            setApprovalTarget(registration);
+                            setApprovalForm({
+                              departmentId: "",
+                              programId: "",
+                              admissionYear: new Date().getFullYear(),
+                              currentYear: 1,
+                              currentSemester: 1,
+                            });
+                          }}
+                        >
+                          <UserCheck className="size-3.5" />
+                          Assign & Approve
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog
+        open={approvalTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !approveMutation.isPending) setApprovalTarget(null);
+        }}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Approve Student Registration</DialogTitle>
+            <DialogDescription>
+              {approvalTarget
+                ? `Assign academic details for ${approvalTarget.name}. This creates the student profile and activates the account.`
+                : "Assign academic details to activate this student account."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="approval-department">Department</Label>
+              <select
+                id="approval-department"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={approvalForm.departmentId}
+                onChange={(event) =>
+                  setApprovalForm((form) => ({
+                    ...form,
+                    departmentId: event.target.value,
+                    programId: "",
+                  }))
+                }
+              >
+                <option value="">Select department</option>
+                {departments.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.code} — {department.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="approval-program">Program</Label>
+              <select
+                id="approval-program"
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={approvalForm.programId}
+                disabled={!approvalForm.departmentId}
+                onChange={(event) =>
+                  setApprovalForm((form) => ({
+                    ...form,
+                    programId: event.target.value,
+                  }))
+                }
+              >
+                <option value="">Select program</option>
+                {programs
+                  .filter(
+                    (program) =>
+                      program.departmentId === approvalForm.departmentId,
+                  )
+                  .map((program) => (
+                    <option key={program.id} value={program.id}>
+                      {program.code} — {program.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="approval-admission-year">Admission Year</Label>
+                <Input
+                  id="approval-admission-year"
+                  type="number"
+                  min={1900}
+                  value={approvalForm.admissionYear}
+                  onChange={(event) =>
+                    setApprovalForm((form) => ({
+                      ...form,
+                      admissionYear: Number(event.target.value),
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="approval-current-year">Current Year</Label>
+                <Input
+                  id="approval-current-year"
+                  type="number"
+                  min={1}
+                  value={approvalForm.currentYear}
+                  onChange={(event) =>
+                    setApprovalForm((form) => ({
+                      ...form,
+                      currentYear: Number(event.target.value),
+                    }))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="approval-current-semester">Semester</Label>
+                <Input
+                  id="approval-current-semester"
+                  type="number"
+                  min={1}
+                  value={approvalForm.currentSemester}
+                  onChange={(event) =>
+                    setApprovalForm((form) => ({
+                      ...form,
+                      currentSemester: Number(event.target.value),
+                    }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="approval-student-id">Student ID (optional)</Label>
+              <Input
+                id="approval-student-id"
+                value={approvalForm.studentId ?? ""}
+                placeholder="Generated automatically if left blank"
+                onChange={(event) =>
+                  setApprovalForm((form) => ({
+                    ...form,
+                    studentId: event.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setApprovalTarget(null)}
+                disabled={approveMutation.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={
+                  approveMutation.isPending ||
+                  !approvalTarget ||
+                  !approvalForm.departmentId ||
+                  !approvalForm.programId ||
+                  approvalForm.admissionYear < 1900 ||
+                  approvalForm.currentYear < 1 ||
+                  approvalForm.currentSemester < 1
+                }
+                onClick={() => {
+                  if (!approvalTarget) return;
+                  approveMutation.mutate({
+                    userId: approvalTarget.id,
+                    payload: {
+                      ...approvalForm,
+                      studentId: approvalForm.studentId?.trim() || undefined,
+                    },
+                  });
+                }}
+              >
+                {approveMutation.isPending ? "Approving..." : "Approve Student"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Filter Controls ──────────────────────────────────────────────────── */}
       <Card className="border-border/80 shadow-xs">

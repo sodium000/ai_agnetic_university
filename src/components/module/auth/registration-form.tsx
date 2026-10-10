@@ -5,7 +5,6 @@ import { Eye, EyeClosed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -35,7 +34,6 @@ export function RegisterForm({
       name: "",
       email: "",
       phone: "",
-      photo: undefined,
       password: "",
     } as RegisterFormValues,
 
@@ -173,41 +171,6 @@ export function RegisterForm({
                         field.state.meta.isTouched && !field.state.meta.isValid
                       }
                     />
-
-                    {field.state.meta.isTouched &&
-                      !field.state.meta.isValid && (
-                        <FieldError>
-                          {field.state.meta.errors.map((error) => (
-                            <div key={error?.message}>{error?.message}</div>
-                          ))}
-                        </FieldError>
-                      )}
-                  </Field>
-                )}
-              </form.Field>
-
-              {/* Photo */}
-              <form.Field name="photo">
-                {(field) => (
-                  <Field>
-                    <FieldLabel htmlFor={field.name}>Profile Photo</FieldLabel>
-
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      type="file"
-                      accept="image/*"
-                      onBlur={field.handleBlur}
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-
-                        field.handleChange(file);
-                      }}
-                    />
-
-                    <FieldDescription>
-                      Upload a profile photo. This field is optional.
-                    </FieldDescription>
 
                     {field.state.meta.isTouched &&
                       !field.state.meta.isValid && (

@@ -99,6 +99,7 @@ export function StudentPaymentsView() {
     data: apiInvoices,
     isLoading: isLoadingInvoices,
     isError: isErrorInvoices,
+    error: invoicesError,
     refetch: refetchInvoices,
     isFetching: isFetchingInvoices,
   } = useQuery({
@@ -113,6 +114,7 @@ export function StudentPaymentsView() {
     data: apiPayments,
     isLoading: isLoadingPayments,
     isError: isErrorPayments,
+    error: paymentsError,
     refetch: refetchPayments,
     isFetching: isFetchingPayments,
   } = useQuery({
@@ -125,13 +127,13 @@ export function StudentPaymentsView() {
   // Effective Invoices & Payments (Live API vs Interactive Demo)
   const invoices: StudentInvoice[] = useMemo(() => {
     if (localFallbackMode) return demoInvoices;
-    return apiInvoices || (isErrorInvoices ? initialMockInvoices : []);
-  }, [localFallbackMode, demoInvoices, apiInvoices, isErrorInvoices]);
+    return apiInvoices || [];
+  }, [localFallbackMode, demoInvoices, apiInvoices]);
 
   const payments: StudentPayment[] = useMemo(() => {
     if (localFallbackMode) return demoPayments;
-    return apiPayments || (isErrorPayments ? initialMockPayments : []);
-  }, [localFallbackMode, demoPayments, apiPayments, isErrorPayments]);
+    return apiPayments || [];
+  }, [localFallbackMode, demoPayments, apiPayments]);
 
   // Financial Computations
   const { totalAmount, paidAmount, pendingAmount } = useMemo(() => {
@@ -276,11 +278,14 @@ export function StudentPaymentsView() {
               <AlertCircle className="size-5 text-amber-500 shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-semibold text-foreground">
-                  Backend connection unavailable (port 5000 offline)
+                  Unable to load billing data
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Showing development mock invoices. You can launch interactive
-                  demo mode to test Stripe checkout redirection.
+                  {extractErrorMessage(
+                    invoicesError,
+                    "The billing service returned an error. Refresh the page or sign in again.",
+                  )}{" "}
+                  No demo invoices are shown as real charges.
                 </p>
               </div>
             </div>
@@ -290,8 +295,26 @@ export function StudentPaymentsView() {
               className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shrink-0"
             >
               <Sparkles className="size-3.5 mr-1" />
-              Interactive Demo Mode
+              Use Demo Data
             </Button>
+          </CardContent>
+        </Card>
+      )}
+      {isErrorPayments && !localFallbackMode && !isErrorInvoices && (
+        <Card className="border-amber-500/30 bg-amber-500/5 shadow-xs">
+          <CardContent className="p-4 flex items-start gap-3">
+            <AlertCircle className="size-5 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-foreground">
+                Unable to load payment history
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {extractErrorMessage(
+                  paymentsError,
+                  "The payment service returned an error. Refresh the page or sign in again.",
+                )}
+              </p>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -523,7 +546,7 @@ export function StudentPaymentsView() {
                           • {pay.method}
                         </p>
                         {pay.transactionId && (
-                          <p className="font-mono text-[10px] text-muted-foreground/80 truncate max-w-[180px]">
+                          <p className="font-mono text-[10px] text-muted-foreground/80 truncate max-w-45">
                             {pay.transactionId}
                           </p>
                         )}

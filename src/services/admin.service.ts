@@ -11,6 +11,7 @@ import type {
   AdminSemester,
   AdminStudent,
   AdminSystemReport,
+  ApproveStudentRegistrationPayload,
   CreateCoursePayload,
   CreateDepartmentPayload,
   CreateFacultyPayload,
@@ -20,6 +21,7 @@ import type {
   CreateStudentPayload,
   ForceEnrollPayload,
   StudentFilterParams,
+  PendingStudentRegistration,
   UpdateDepartmentPayload,
   UpdateStudentPayload,
 } from "@/types/admin";
@@ -296,6 +298,36 @@ export async function fetchAdminStudents(
     );
   }
   return filtered;
+}
+
+export async function fetchPendingStudentRegistrations(): Promise<
+  PendingStudentRegistration[]
+> {
+  const response = await apiFetch<unknown>(
+    "/admin/students/pending-registrations",
+  );
+  const registrations = extractArray<PendingStudentRegistration>(response);
+  if (registrations === null) {
+    throw new Error("The server returned an invalid pending registrations list.");
+  }
+  return registrations;
+}
+
+export async function approveStudentRegistration(
+  userId: string,
+  payload: ApproveStudentRegistrationPayload,
+): Promise<AdminStudent> {
+  const response = await apiFetch<ApiResponse<AdminStudent>>(
+    `/admin/students/${encodeURIComponent(userId)}/approve-registration`,
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
+  if (!response?.data) {
+    throw new Error(response?.message || "Failed to approve student registration.");
+  }
+  return response.data;
 }
 
 export async function createAdminStudent(

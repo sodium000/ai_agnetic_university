@@ -132,6 +132,8 @@ export function EnrollmentView() {
       queryClient.invalidateQueries({
         queryKey: ["student-available-sections"],
       });
+      queryClient.invalidateQueries({ queryKey: ["student-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["student-payments"] });
     },
     onError: (err: unknown) => {
       const msg = extractErrorMessage(
@@ -139,6 +141,12 @@ export function EnrollmentView() {
         "Failed to enroll in course section",
       );
       toast.error(msg);
+      queryClient.invalidateQueries({ queryKey: ["student-enrolled-courses"] });
+      queryClient.invalidateQueries({
+        queryKey: ["student-available-sections"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["student-invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["student-payments"] });
     },
     onSettled: () => {
       setEnrollingSectionId(null);

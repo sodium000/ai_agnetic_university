@@ -141,17 +141,15 @@ export async function logoutUser(): Promise<void> {
   } catch {}
 }
 
-/**
- * POST /api/v1/auth/refresh-token
- */
+/** POST /auth/api/v1/refresh-token */
 export async function refreshAccessToken(): Promise<{
   accessToken: string;
   refreshToken?: string;
 }> {
-  const response = await apiFetchFirst<{
+  const response = await apiFetch<{
     success: boolean;
     data: { accessToken: string; refreshToken?: string };
-  }>(["/api/v1/auth/refresh-token", "/api/v1/refresh-token"], {
+  }>("/auth/api/v1/refresh-token", {
     method: "POST",
   });
   return response.data;
@@ -169,45 +167,74 @@ export interface VerifyOtpPayload {
   otp: string;
 }
 
+export interface RegistrationCompletion {
+  pendingApproval?: boolean;
+  accessToken?: string;
+  refreshToken?: string;
+  user?: AuthUser;
+}
+
+function getAuthErrorMessage(error: unknown, fallback: string): string {
+  if (typeof error !== "object" || error === null) return fallback;
+  const err = error as {
+    data?: {
+      message?: string;
+      error?: { details?: Record<string, unknown> };
+    };
+    message?: string;
+  };
+  const details = err.data?.error?.details;
+  if (details && typeof details === "object") {
+    const [field, messages] = Object.entries(details)[0] ?? [];
+    const message = Array.isArray(messages) ? messages[0] : messages;
+    if (field && typeof message === "string") {
+      return `${field}: ${message}`;
+    }
+  }
+  return err.data?.message || err.message || fallback;
+}
+
 export async function registerUser(payload: RegisterPayload) {
   try {
-    return await apiFetch("/api/v1/auth/register", {
+    return await apiFetch("/api/v1/auth/verifyUser", {
       method: "POST",
       body: payload,
     });
   } catch (error: unknown) {
-    const err = error as { data?: { message?: string }; message?: string };
-    throw new Error(err?.data?.message || err?.message || "Registration failed");
+    throw new Error(getAuthErrorMessage(error, "Registration failed"));
   }
 }
 
 export async function verifyRegistrationOtp(
   payload: VerifyOtpPayload,
-): Promise<LoginApiResponse["data"] | null> {
+): Promise<RegistrationCompletion | null> {
   try {
-    const response = await apiFetch<LoginApiResponse>(
-      "/api/v1/auth/verifyUser",
-      { method: "POST", body: payload },
-    );
-    if (response?.data?.user) {
+    const response = await apiFetch<{
+      success: boolean;
+      statusCode: number;
+      message: string;
+      data?: RegistrationCompletion | null;
+    }>("/api/v1/auth/register", {
+      method: "POST",
+      body: payload,
+    });
+    if (response?.data?.user && !response.data.pendingApproval) {
       storeAuthenticatedUser(response.data.user);
     }
     return response?.data ?? null;
   } catch (error: unknown) {
-    const err = error as { data?: { message?: string }; message?: string };
-    throw new Error(err?.data?.message || err?.message || "Invalid OTP");
+    throw new Error(getAuthErrorMessage(error, "Invalid OTP"));
   }
 }
 
 export async function resendRegistrationOtp(email: string) {
   try {
-    return await apiFetch("/api/v1/auth/register", {
+    return await apiFetch("/api/v1/auth/resendOtp", {
       method: "POST",
       body: { email },
     });
   } catch (error: unknown) {
-    const err = error as { data?: { message?: string }; message?: string };
-    throw new Error(err?.data?.message || err?.message || "Unable to resend OTP");
+    throw new Error(getAuthErrorMessage(error, "Unable to resend OTP"));
   }
 }
 
