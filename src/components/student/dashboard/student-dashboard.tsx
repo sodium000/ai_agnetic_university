@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ArrowRight,
@@ -15,7 +15,7 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -29,33 +29,32 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { studentDashboardData } from "@/data/student-dashboard";
 import { cn } from "@/lib/utils";
 import {
   fetchEnrolledCourses,
-  initialMockEnrollments,
+  fetchStudentAssignments,
+  fetchStudentAttendance,
+  fetchStudentSchedule,
+  fetchStudentTranscript,
 } from "@/services/student-enrollment.service";
-import {
-  fetchNotifications,
-  mockNotifications,
-} from "@/services/student-notification.service";
+import { fetchNotifications } from "@/services/student-notification.service";
 import {
   fetchStudentInvoices,
   fetchStudentPayments,
-  initialMockInvoices,
-  initialMockPayments,
 } from "@/services/student-payment.service";
-import {
-  fetchStudentProfile,
-  initialMockProfile,
-} from "@/services/student-profile.service";
+import { fetchStudentProfile } from "@/services/student-profile.service";
 import type { EnrolledCourseEnrollment } from "@/types/student-course-enrollment";
 import type {
+  Assignment,
+  AssignmentStatus,
+  AttendanceData,
   CurrentCourse,
+  ExamType,
   FeeSummaryData,
+  GPAHistory,
   Student,
-  StudentDashboardData,
   TodayClass,
+  UpcomingExam,
 } from "@/types/student-dashboard";
 
 import { AssignmentsCard } from "./assignments-card";
@@ -69,15 +68,70 @@ import { StudentHeader } from "./student-header";
 import { TodayClasses } from "./today-classes";
 import { UpcomingExams } from "./upcoming-exams";
 
-interface StudentDashboardProps {
-  initialData?: StudentDashboardData;
+type ApiRecord = Record<string, unknown>;
+type ScheduledClass = TodayClass & { dayOfWeek: string };
+
+function asRecord(value: unknown): ApiRecord {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as ApiRecord)
+    : {};
 }
 
-export function StudentDashboard({
-  initialData = studentDashboardData,
-}: StudentDashboardProps) {
-  const queryClient = useQueryClient();
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function asText(value: unknown): string {
+  return typeof value === "string" || typeof value === "number"
+    ? String(value)
+    : "";
+}
+
+function asNumber(value: unknown): number {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function formatDate(
+  value: unknown,
+  options: Intl.DateTimeFormatOptions,
+): string {
+  if (!value) return "—";
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime())
+    ? "—"
+    : new Intl.DateTimeFormat("en-US", { ...options, timeZone: "UTC" }).format(
+        date,
+      );
+}
+
+function formatTime(value: unknown): string {
+  if (!value) return "—";
+  const time = String(value);
+  const match = /(?:T|^)(\d{1,2}):(\d{2})/.exec(time);
+  if (!match) {
+    return /^\d{4}-\d{2}-\d{2}/.test(time) ? "—" : time;
+  }
+  const date = new Date(
+    Date.UTC(2000, 0, 1, Number(match[1]), Number(match[2])),
+  );
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "UTC",
+  }).format(date);
+}
+
+export function StudentDashboard() {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [today, setToday] = useState<string | null>(null);
+
+  useEffect(() => {
+    setToday(
+      new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(new Date()),
+    );
+  }, []);
 
   // ── 1. Query: Student Profile (/api/v1/student/me) ───────────────────────────
   const {
@@ -111,6 +165,7 @@ export function StudentDashboard({
   const {
     data: apiInvoices,
     isLoading: isInvoicesLoading,
+    isError: isInvoicesError,
     refetch: refetchInvoices,
     isFetching: isInvoicesFetching,
   } = useQuery({
@@ -122,6 +177,7 @@ export function StudentDashboard({
 
   const {
     data: apiPayments,
+    isError: isPaymentsError,
     refetch: refetchPayments,
     isFetching: isPaymentsFetching,
   } = useQuery({
@@ -134,6 +190,7 @@ export function StudentDashboard({
   // ── 4. Query: Notifications (/api/v1/student/me/notifications) ──────────────
   const {
     data: apiNotifications,
+    isError: isNotificationsError,
     refetch: refetchNotifications,
     isFetching: isNotificationsFetching,
   } = useQuery({
@@ -143,55 +200,114 @@ export function StudentDashboard({
     staleTime: 30000,
   });
 
+  const {
+    data: scheduleData,
+    isLoading: isScheduleLoading,
+    isError: isScheduleError,
+    isFetching: isScheduleFetching,
+    refetch: refetchSchedule,
+  } = useQuery({
+    queryKey: ["student-schedule"],
+    queryFn: fetchStudentSchedule,
+    retry: 1,
+    staleTime: 30000,
+  });
+
+  const {
+    data: attendanceData,
+    isLoading: isAttendanceLoading,
+    isError: isAttendanceError,
+    isFetching: isAttendanceFetching,
+    refetch: refetchAttendance,
+  } = useQuery({
+    queryKey: ["student-attendance"],
+    queryFn: fetchStudentAttendance,
+    retry: 1,
+    staleTime: 30000,
+  });
+
+  const {
+    data: transcriptData,
+    isLoading: isTranscriptLoading,
+    isError: isTranscriptError,
+    isFetching: isTranscriptFetching,
+    refetch: refetchTranscript,
+  } = useQuery({
+    queryKey: ["student-transcript"],
+    queryFn: fetchStudentTranscript,
+    retry: 1,
+    staleTime: 30000,
+  });
+
+  const {
+    data: apiAssignments,
+    isLoading: isAssignmentsLoading,
+    isError: isAssignmentsError,
+    isFetching: isAssignmentsFetching,
+    refetch: refetchAssignments,
+  } = useQuery({
+    queryKey: ["student-assignments"],
+    queryFn: fetchStudentAssignments,
+    retry: 1,
+    staleTime: 30000,
+  });
+
   const isAnyFetching =
     isProfileFetching ||
     isCoursesFetching ||
     isInvoicesFetching ||
     isPaymentsFetching ||
-    isNotificationsFetching;
+    isNotificationsFetching ||
+    isScheduleFetching ||
+    isAttendanceFetching ||
+    isTranscriptFetching ||
+    isAssignmentsFetching;
 
   // ── Unified Refresh Handler ──────────────────────────────────────────────────
   const handleRefreshAll = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["student-profile"] }),
-      queryClient.invalidateQueries({ queryKey: ["student-enrolled-courses"] }),
-      queryClient.invalidateQueries({ queryKey: ["student-invoices"] }),
-      queryClient.invalidateQueries({ queryKey: ["student-payments"] }),
-      queryClient.invalidateQueries({ queryKey: ["student-notifications"] }),
+    const results = await Promise.all([
       refetchProfile(),
       refetchCourses(),
       refetchInvoices(),
       refetchPayments(),
       refetchNotifications(),
+      refetchSchedule(),
+      refetchAttendance(),
+      refetchTranscript(),
+      refetchAssignments(),
     ]);
-    toast.success("Dashboard data refreshed");
+    if (results.some((result) => result.isError)) {
+      toast.error("Some dashboard data could not be refreshed");
+    } else {
+      toast.success("Dashboard data refreshed");
+    }
   };
 
   // ── Synchronized Effective Data ──────────────────────────────────────────────
 
   // 1. Effective Profile
   const effectiveStudent: Student = useMemo(() => {
-    const p = profileData || initialMockProfile;
+    const p = profileData;
     return {
-      name: p.user?.name || initialData.student.name,
-      studentId: p.studentId || initialData.student.studentId,
-      email: p.user?.email || initialData.student.email,
-      phone: p.phone || p.user?.phone || initialData.student.phone,
-      photoUrl: p.photoUrl || p.user?.photoUrl || initialData.student.photoUrl,
-      department: p.department?.name || initialData.student.department,
-      departmentCode: p.department?.code || initialData.student.departmentCode,
-      program: p.program?.name || initialData.student.program,
-      programCode: p.program?.code || initialData.student.programCode,
-      currentYear: p.currentYear || initialData.student.currentYear,
-      currentSemester: p.currentSemester || initialData.student.currentSemester,
-      admissionYear: p.admissionYear || initialData.student.admissionYear,
+      name: p?.user?.name || "",
+      studentId: p?.studentId || "",
+      email: p?.user?.email || "",
+      phone: p?.phone || p?.user?.phone || "",
+      photoUrl: p?.photoUrl || p?.user?.photoUrl || undefined,
+      department: p?.department?.name || "",
+      departmentCode: p?.department?.code || "",
+      program: p?.program?.name || "",
+      programCode: p?.program?.code || "",
+      currentYear: p?.currentYear ?? 0,
+      currentSemester: p?.currentSemester ?? 0,
+      admissionYear: p?.admissionYear ?? 0,
     };
-  }, [profileData, initialData.student]);
+  }, [profileData]);
 
   // 2. Effective Enrolled Courses
   const enrolledCourses: EnrolledCourseEnrollment[] = useMemo(() => {
-    return apiEnrolledCourses || (isCoursesError ? initialMockEnrollments : []);
-  }, [apiEnrolledCourses, isCoursesError]);
+    return apiEnrolledCourses || [];
+  }, [apiEnrolledCourses]);
 
   const activeEnrollments = useMemo(() => {
     return enrolledCourses.filter((e) => e.status === "ENROLLED");
@@ -199,56 +315,56 @@ export function StudentDashboard({
 
   // Converted CurrentCourse items for dashboard widgets
   const currentCourses: CurrentCourse[] = useMemo(() => {
-    if (!activeEnrollments.length) {
-      return initialData.currentCourses;
-    }
-    return activeEnrollments.map((enr, idx) => {
+    return activeEnrollments.map((enr) => {
       const sec = enr.section;
       const crs = sec?.course;
       const fac = sec?.faculty;
       return {
         id: enr.id,
-        code: crs?.code || `CRS-${idx + 1}`,
-        title: crs?.title || "Enrolled Course",
-        credit: crs?.credit || 3,
-        section: sec?.name || `Sec 0${idx + 1}`,
-        faculty: fac?.user?.name || "Dr. Assigned Faculty",
-        room: sec?.room || "Room 402, Academic Bldg",
-        progress: [75, 65, 80, 55, 90][idx % 5] || 70,
+        code: crs?.code || "—",
+        title: crs?.title || "—",
+        credit: asNumber(crs?.credit),
+        section: sec?.name || "—",
+        faculty: fac?.user?.name || "—",
+        room: sec?.room || "",
       };
     });
-  }, [activeEnrollments, initialData.currentCourses]);
+  }, [activeEnrollments]);
 
-  // Today's classes derived from schedule
-  const todayClasses: TodayClass[] = useMemo(() => {
-    if (activeEnrollments.length > 0) {
-      return activeEnrollments.slice(0, 3).map((enr, idx) => {
-        const sec = enr.section;
-        const crs = sec?.course;
-        const times = [
-          { start: "09:00 AM", end: "10:30 AM" },
-          { start: "11:00 AM", end: "12:30 PM" },
-          { start: "02:00 PM", end: "03:30 PM" },
-        ];
-        const timeSlot = times[idx % times.length];
+  const scheduledClasses: ScheduledClass[] = useMemo(() => {
+    return asArray(asRecord(scheduleData).classSchedules)
+      .map(asRecord)
+      .map((item, index) => {
+        const section = asRecord(item.section);
+        const course = asRecord(section.course);
+        const faculty = asRecord(section.faculty);
         return {
-          id: `today-${enr.id}`,
-          courseCode: crs?.code || "CSE 301",
-          courseName: crs?.title || "Course Session",
-          faculty: sec?.faculty?.user?.name || "Dr. Faculty",
-          startTime: timeSlot.start,
-          endTime: timeSlot.end,
-          room: sec?.room || "Room 402",
-          building: "Academic Bldg A",
+          id: asText(item.id) || `schedule-${index}`,
+          dayOfWeek: asText(item.dayOfWeek),
+          courseCode: asText(course.code) || "—",
+          courseName: asText(course.title) || "—",
+          faculty: asText(asRecord(faculty.user).name) || "—",
+          startTime: formatTime(item.startTime),
+          endTime: formatTime(item.endTime),
+          room: asText(item.room) || asText(section.room),
+          building: asText(item.building) || asText(section.building),
         };
       });
-    }
-    return initialData.todayClasses;
-  }, [activeEnrollments, initialData.todayClasses]);
+  }, [scheduleData]);
+
+  // Today's classes derived from the backend timetable.
+  const todayClasses: TodayClass[] = useMemo(() => {
+    if (!today) return [];
+    return scheduledClasses.filter(
+      (item) =>
+        item.dayOfWeek.slice(0, 3).toLowerCase() ===
+        today.slice(0, 3).toLowerCase(),
+    );
+  }, [scheduledClasses, today]);
 
   // Effective Financials
   const feeSummary: FeeSummaryData = useMemo(() => {
-    const invs = apiInvoices || initialMockInvoices;
+    const invs = apiInvoices || [];
     const total = invs.reduce((acc, i) => acc + (i.amount || 0), 0);
     const paid = invs
       .filter((i) => i.status === "PAID")
@@ -258,34 +374,33 @@ export function StudentDashboard({
       .reduce((acc, i) => acc + (i.amount || 0), 0);
 
     return {
-      total: total || initialData.invoices.total,
-      paid: paid || initialData.invoices.paid,
-      pending: pending || initialData.invoices.pending,
+      total,
+      paid,
+      pending,
       items: invs.map((i) => ({
         id: i.id,
         invoiceNo: i.invoiceNo,
-        title: i.title || "Tuition & Registration Fee",
+        title: i.title || i.invoiceNo,
         amount: i.amount,
         dueDate: i.dueDate,
         status: i.status,
       })),
     };
-  }, [apiInvoices, initialData.invoices]);
+  }, [apiInvoices]);
 
   // Effective Recent Payments
   const recentPayments = useMemo(() => {
-    const paymentList =
-      apiPayments && apiPayments.length > 0 ? apiPayments : initialMockPayments;
+    const paymentList = apiPayments || [];
 
     return paymentList.map((p) => {
-      const paymentDate = p.createdAt || p.date || new Date().toISOString();
+      const paymentDate = p.createdAt || p.date;
       return {
         id: p.id,
-        invoiceNo: p.invoiceNo || "INV-GEN",
+        invoiceNo: p.invoiceNo || "—",
         amount: p.amount,
         method: p.method,
-        status: "SUCCESS" as const,
-        date: new Date(paymentDate).toLocaleDateString("en-US", {
+        status: p.status,
+        date: formatDate(paymentDate, {
           month: "short",
           day: "numeric",
           year: "numeric",
@@ -296,49 +411,164 @@ export function StudentDashboard({
 
   // Effective Notifications
   const notifications = useMemo(() => {
-    if (apiNotifications && apiNotifications.length > 0) {
-      return apiNotifications.map((n) => ({
-        id: n.id,
-        title: n.title,
-        message: n.message,
-        type: n.type,
-        isRead: n.isRead,
-        createdAt: new Date(n.createdAt).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        }),
-      }));
-    }
-    return mockNotifications.map((n) => ({
+    return (apiNotifications || []).map((n) => ({
       id: n.id,
       title: n.title,
       message: n.message,
       type: n.type,
       isRead: n.isRead,
-      createdAt: "Recently",
+      createdAt: formatDate(n.createdAt, {
+        month: "short",
+        day: "numeric",
+      }),
     }));
   }, [apiNotifications]);
 
   // Effective Dashboard Stats
   const overviewStats = useMemo(() => {
-    const courseCount =
-      activeEnrollments.length > 0
-        ? activeEnrollments.length
-        : initialData.overview.currentCourses;
+    const transcript = asRecord(transcriptData);
+    const academicSummary = asRecord(transcript.academicSummary);
+    const attendanceSummary = asRecord(asRecord(attendanceData).summary);
 
     return {
-      cgpa: initialData.overview.cgpa,
-      completedCredits: initialData.overview.completedCredits,
-      totalCredits:
-        profileData?.program?.totalCredits || initialData.overview.totalCredits,
-      currentCourses: courseCount,
-      attendance: initialData.overview.attendance,
+      cgpa: asNumber(academicSummary.cgpa),
+      completedCredits: asNumber(academicSummary.totalCreditsEarned),
+      totalCredits: asNumber(profileData?.program?.totalCredits),
+      currentCourses: activeEnrollments.length,
+      attendance: asNumber(
+        String(attendanceSummary.percentage ?? "0").replace("%", ""),
+      ),
     };
-  }, [activeEnrollments, initialData.overview, profileData]);
+  }, [activeEnrollments.length, attendanceData, profileData, transcriptData]);
+
+  const gpaHistory: GPAHistory[] = useMemo(() => {
+    return asArray(asRecord(transcriptData).semesters)
+      .map(asRecord)
+      .map((semester) => ({
+        semester: [asText(semester.semesterName), asText(semester.semesterYear)]
+          .filter(Boolean)
+          .join(" "),
+        gpa: asNumber(semester.sgpa),
+      }))
+      .filter((semester) => semester.semester && semester.gpa > 0);
+  }, [transcriptData]);
+
+  const attendanceChartData: AttendanceData[] = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const record of asArray(asRecord(attendanceData).records).map(
+      asRecord,
+    )) {
+      const status = asText(record.status).toUpperCase();
+      const label =
+        status === "PRESENT"
+          ? "Present"
+          : status === "LATE"
+            ? "Late"
+            : status === "ABSENT"
+              ? "Absent"
+              : null;
+      if (label) counts.set(label, (counts.get(label) ?? 0) + 1);
+    }
+    return (["Present", "Late", "Absent"] as const)
+      .filter((status) => (counts.get(status) ?? 0) > 0)
+      .map((status) => ({ status, count: counts.get(status) ?? 0 }));
+  }, [attendanceData]);
+
+  const assignments: Assignment[] = useMemo(() => {
+    return asArray(apiAssignments)
+      .map(asRecord)
+      .map((assignment, index) => {
+        const course = asRecord(assignment.course);
+        const section = asRecord(assignment.section);
+        const sectionCourse = asRecord(section.course);
+        const deadline = asText(assignment.deadline);
+        const rawStatus = asText(
+          assignment.submissionStatus ?? asRecord(assignment.submission).status,
+        ).toUpperCase();
+        const submitted =
+          rawStatus === "SUBMITTED" || Boolean(assignment.submittedAt);
+        const status: AssignmentStatus =
+          rawStatus === "LATE"
+            ? "LATE"
+            : submitted
+              ? "SUBMITTED"
+              : deadline && new Date(deadline).getTime() < Date.now()
+                ? "OVERDUE"
+                : "PENDING";
+        return {
+          id: asText(assignment.id) || `assignment-${index}`,
+          title: asText(assignment.title) || "—",
+          course: asText(course.code) || asText(sectionCourse.code) || "—",
+          deadline: formatDate(deadline, {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+          status,
+          marks: asNumber(assignment.totalMarks),
+        };
+      });
+  }, [apiAssignments]);
+
+  const upcomingExams: UpcomingExam[] = useMemo(() => {
+    return asArray(asRecord(scheduleData).examSchedules)
+      .map(asRecord)
+      .filter((exam) => {
+        const examDate = new Date(asText(exam.examDate));
+        return (
+          !Number.isNaN(examDate.getTime()) && examDate.getTime() >= Date.now()
+        );
+      })
+      .map((exam, index) => {
+        const section = asRecord(exam.section);
+        const course = asRecord(section.course);
+        const examDate = asText(exam.examDate);
+        const examType = asText(exam.type).toUpperCase();
+        const type: ExamType =
+          examType === "MIDTERM" ||
+          examType === "FINAL" ||
+          examType === "QUIZ" ||
+          examType === "PRACTICAL"
+            ? examType
+            : "FINAL";
+        return {
+          id: asText(exam.id) || `exam-${index}`,
+          title: asText(exam.title) || asText(exam.type) || "Exam",
+          type,
+          courseCode: asText(course.code) || "—",
+          courseName: asText(course.title) || "—",
+          date: formatDate(examDate, {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+          time: formatTime(exam.startTime ?? examDate),
+          room: asText(exam.room) || asText(section.room) || "—",
+          totalMarks: asNumber(exam.totalMarks) || undefined,
+        };
+      });
+  }, [scheduleData]);
 
   // Initial loading state skeleton
   const isInitialLoading =
-    isProfileLoading && isCoursesLoading && isInvoicesLoading;
+    isProfileLoading ||
+    isCoursesLoading ||
+    isInvoicesLoading ||
+    isScheduleLoading ||
+    isAttendanceLoading ||
+    isTranscriptLoading ||
+    isAssignmentsLoading;
+
+  const hasApiErrors =
+    isProfileError ||
+    isCoursesError ||
+    isInvoicesError ||
+    isPaymentsError ||
+    isNotificationsError ||
+    isScheduleError ||
+    isAttendanceError ||
+    isTranscriptError ||
+    isAssignmentsError;
 
   if (isInitialLoading) {
     return (
@@ -371,19 +601,19 @@ export function StudentDashboard({
         onOpenSchedule={() => setScheduleDialogOpen(true)}
       />
 
-      {/* ── Offline Fallback Alert Notice ────────────────────────────────────── */}
-      {(isProfileError || isCoursesError) && (
+      {/* ── API Sync Notice ──────────────────────────────────────────────────── */}
+      {hasApiErrors && (
         <Card className="border-amber-500/30 bg-amber-500/5 shadow-xs">
           <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-start gap-3">
               <AlertTriangle className="size-5 text-amber-500 shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-semibold text-foreground">
-                  Backend sync offline — Interactive Demo Active
+                  Some dashboard data could not be loaded
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Displaying simulated student metrics, enrolled courses, and
-                  academic timeline. Real-time actions remain active.
+                  Dashboard sections show only information returned by the
+                  backend. Try refreshing or check the API connection.
                 </p>
               </div>
             </div>
@@ -404,7 +634,23 @@ export function StudentDashboard({
       )}
 
       {/* ── 2. Real-time Dashboard KPI Stats ─────────────────────────────────── */}
-      <DashboardStats stats={overviewStats} />
+      <DashboardStats
+        stats={overviewStats}
+        availability={{
+          cgpa: Boolean(transcriptData) && !isTranscriptError,
+          credits:
+            Boolean(transcriptData) &&
+            !isTranscriptError &&
+            Boolean(profileData?.program?.totalCredits),
+          courses: !isCoursesError,
+          attendance:
+            Boolean(attendanceData) &&
+            !isAttendanceError &&
+            asNumber(asRecord(asRecord(attendanceData).summary).total) > 0 &&
+            asText(asRecord(asRecord(attendanceData).summary).percentage) !==
+              "N/A",
+        }}
+      />
 
       {/* ── 3. Quick Action Navigation Row ──────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -451,7 +697,11 @@ export function StudentDashboard({
             <p className="text-xs font-semibold text-foreground group-hover:text-amber-600 transition-colors">
               Grades & GPA
             </p>
-            <p className="text-[11px] text-muted-foreground">3.72 Cumulative</p>
+            <p className="text-[11px] text-muted-foreground">
+              {transcriptData && !isTranscriptError && overviewStats.cgpa > 0
+                ? `${overviewStats.cgpa.toFixed(2)} Cumulative`
+                : "No published GPA"}
+            </p>
           </div>
         </Link>
 
@@ -527,11 +777,11 @@ export function StudentDashboard({
         className="grid gap-6 lg:grid-cols-7"
       >
         <div className="lg:col-span-4">
-          <GPAChart data={initialData.gpaHistory} />
+          <GPAChart data={gpaHistory} />
         </div>
 
         <div className="lg:col-span-3">
-          <AttendanceChart data={initialData.attendance} />
+          <AttendanceChart data={attendanceChartData} />
         </div>
       </section>
 
@@ -540,8 +790,8 @@ export function StudentDashboard({
         aria-label="Assignments and upcoming exams"
         className="grid gap-6 lg:grid-cols-2"
       >
-        <AssignmentsCard assignments={initialData.assignments} />
-        <UpcomingExams exams={initialData.upcomingExams} />
+        <AssignmentsCard assignments={assignments} />
+        <UpcomingExams exams={upcomingExams} />
       </section>
 
       {/* ── 7. Tuition Billing & University Notifications ──────────────────────── */}
@@ -562,7 +812,7 @@ export function StudentDashboard({
                 variant="outline"
                 className="text-primary font-semibold text-xs"
               >
-                Fall 2026 Timetable
+                Weekly Schedule
               </Badge>
               <Badge variant="secondary" className="text-xs">
                 {currentCourses.length} Courses
@@ -572,84 +822,56 @@ export function StudentDashboard({
               Weekly Class Schedule
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Official timetable of lectures, lab sessions, and classroom
-              venues.
+              Class times, days, and rooms from your current timetable.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 pt-2 text-xs">
-            {activeEnrollments.length > 0 ? (
+            {scheduledClasses.length > 0 ? (
               <div className="divide-y divide-border/60 rounded-lg border border-border/60 overflow-hidden">
-                {activeEnrollments.map((enr) => {
-                  const sec = enr.section;
-                  const crs = sec?.course;
-                  return (
-                    <div
-                      key={enr.id}
-                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 gap-2 bg-card hover:bg-muted/30 transition-colors"
-                    >
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-foreground font-mono">
-                            {crs?.code}
-                          </span>
-                          <span className="text-muted-foreground">•</span>
-                          <span className="text-muted-foreground">
-                            {sec?.name}
-                          </span>
-                        </div>
-                        <p className="font-medium text-foreground text-xs">
-                          {crs?.title}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                          <User className="size-3" />
-                          {sec?.faculty?.user?.name || "Dr. Faculty"}
-                        </p>
-                      </div>
-
-                      <div className="space-y-1 sm:text-right">
-                        <Badge
-                          variant="outline"
-                          className="font-mono text-xs text-primary bg-primary/5"
-                        >
-                          <Clock className="mr-1 size-3" />
-                          {sec?.schedule || "Mon, Wed 10:00 AM"}
-                        </Badge>
-                        <p className="text-[11px] text-muted-foreground flex items-center gap-1 sm:justify-end">
-                          <MapPin className="size-3 text-primary" />
-                          {sec?.room || "Room 402"}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="divide-y divide-border/60 rounded-lg border border-border/60 overflow-hidden">
-                {todayClasses.map((cls) => (
+                {scheduledClasses.map((cls) => (
                   <div
                     key={cls.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 gap-2 bg-card"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 gap-2 bg-card hover:bg-muted/30 transition-colors"
                   >
-                    <div>
-                      <span className="font-bold text-foreground font-mono">
-                        {cls.courseCode}
-                      </span>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-foreground font-mono">
+                          {cls.courseCode}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {cls.dayOfWeek || "—"}
+                        </span>
+                      </div>
                       <p className="font-medium text-foreground text-xs">
                         {cls.courseName}
                       </p>
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                        <User className="size-3" />
+                        {cls.faculty || "—"}
+                      </p>
                     </div>
-                    <div className="sm:text-right">
-                      <Badge variant="outline" className="font-mono text-xs">
+
+                    <div className="space-y-1 sm:text-right">
+                      <Badge
+                        variant="outline"
+                        className="font-mono text-xs text-primary bg-primary/5"
+                      >
                         <Clock className="mr-1 size-3" />
                         {cls.startTime} - {cls.endTime}
                       </Badge>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {cls.room}
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1 sm:justify-end">
+                        <MapPin className="size-3 text-primary" />
+                        {[cls.room, cls.building].filter(Boolean).join(", ") ||
+                          "—"}
                       </p>
                     </div>
                   </div>
                 ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border/60 p-6 text-center text-sm text-muted-foreground">
+                No class schedule is available.
               </div>
             )}
 

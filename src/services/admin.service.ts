@@ -735,45 +735,34 @@ export async function fetchAdminSections(): Promise<AdminSection[]> {
   try {
     const res = await apiFetch<unknown>("/admin/sections");
     const arr = extractArray<AdminSection>(res);
-    if (arr !== null) return arr;
+    if (arr !== null) return arr.map(normalizeAdminSection);
   } catch (err) {
     console.warn("fetchAdminSections fallback:", err);
   }
   return mockAdminSections;
 }
 
+function normalizeAdminSection(section: AdminSection): AdminSection {
+  const faculty = section.faculty
+    ? normalizeAdminFacultyMember(section.faculty)
+    : null;
+  return {
+    ...section,
+    faculty: faculty ?? section.faculty,
+  };
+}
+
 export async function createAdminSection(
   payload: CreateSectionPayload,
 ): Promise<AdminSection> {
-  try {
-    const res = await apiFetch<ApiResponse<AdminSection>>("/admin/sections", {
-      method: "POST",
-      body: payload,
-    });
-    if (res?.data) return res.data;
-  } catch (err) {
-    console.warn("createAdminSection fallback:", err);
+  const res = await apiFetch<ApiResponse<AdminSection>>("/admin/sections", {
+    method: "POST",
+    body: payload,
+  });
+  if (!res?.data) {
+    throw new Error(res?.message || "Failed to create section");
   }
-
-  const course = mockAdminCourses.find((c) => c.id === payload.courseId);
-  const semester = mockAdminSemesters.find((s) => s.id === payload.semesterId);
-  const faculty = mockAdminFaculty.find((f) => f.id === payload.facultyId);
-
-  const newSection: AdminSection = {
-    id: `sec-${Date.now()}`,
-    name: payload.name,
-    courseId: payload.courseId,
-    semesterId: payload.semesterId,
-    facultyId: payload.facultyId,
-    capacity: payload.capacity,
-    enrolledCount: 0,
-    schedules: payload.schedules,
-    course,
-    semester,
-    faculty,
-  };
-  mockAdminSections.unshift(newSection);
-  return newSection;
+  return normalizeAdminSection(res.data);
 }
 
 export async function updateAdminSection(

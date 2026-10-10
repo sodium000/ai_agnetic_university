@@ -8,11 +8,9 @@ import {
   CheckCircle2,
   RefreshCw,
   Search,
-  Sparkles,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,9 +19,8 @@ import {
   dropCourseEnrollment,
   enrollCourseSection,
   extractErrorMessage,
+  fetchAvailableSections,
   fetchEnrolledCourses,
-  initialAvailableSections,
-  initialMockEnrollments,
 } from "@/services/student-enrollment.service";
 import type { EnrolledCourseEnrollment } from "@/types/student-course-enrollment";
 import { CourseSectionCard } from "./course-section-card";
@@ -48,11 +45,6 @@ export function EnrollmentView() {
     string | null
   >(null);
 
-  // Local state for demo / fallback mode if backend server is offline
-  const [localFallbackEnrollments, setLocalFallbackEnrollments] = useState<
-    EnrolledCourseEnrollment[] | null
-  >(null);
-
   // Query for enrolled courses from GET /api/v1/student/me/courses
   const {
     data: apiEnrolledCourses,
@@ -68,13 +60,21 @@ export function EnrollmentView() {
     staleTime: 30000,
   });
 
-  // Effective enrolled courses (API data or interactive fallback)
-  const enrolledCourses: EnrolledCourseEnrollment[] = useMemo(() => {
-    if (localFallbackEnrollments !== null) {
-      return localFallbackEnrollments;
-    }
-    return apiEnrolledCourses || [];
-  }, [apiEnrolledCourses, localFallbackEnrollments]);
+  const {
+    data: availableSections = [],
+    isLoading: isSectionsLoading,
+    isError: isSectionsError,
+    error: sectionsError,
+    refetch: refetchSections,
+    isFetching: isSectionsFetching,
+  } = useQuery({
+    queryKey: ["student-available-sections"],
+    queryFn: fetchAvailableSections,
+    retry: 1,
+    staleTime: 30000,
+  });
+
+  const enrolledCourses: EnrolledCourseEnrollment[] = apiEnrolledCourses || [];
 
   // Map of active enrollments
   const activeEnrollments = useMemo(() => {
@@ -111,7 +111,7 @@ export function EnrollmentView() {
   // Total credits of currently registered courses
   const totalRegisteredCredits = useMemo(() => {
     return activeEnrollments.reduce(
-      (acc, e) => acc + (e.section?.course?.credit || 3),
+      (acc, e) => acc + (e.section?.course?.credit || 0),
       0,
     );
   }, [activeEnrollments]);
@@ -120,43 +120,18 @@ export function EnrollmentView() {
   const enrollMutation = useMutation({
     mutationFn: async (sectionId: string) => {
       setEnrollingSectionId(sectionId);
-      // If in demo fallback mode, emulate locally
-      if (localFallbackEnrollments !== null || isError) {
-        await new Promise((res) => setTimeout(res, 500));
-        const section = initialAvailableSections.find(
-          (s) => s.id === sectionId,
-        );
-        if (!section) throw new Error("Section not found");
-
-        const newEnrollment: EnrolledCourseEnrollment = {
-          id: `enr-mock-${Date.now()}`,
-          studentId: "stu-current-id",
-          sectionId,
-          status: "ENROLLED",
-          enrolledAt: new Date().toISOString(),
-          section: {
-            ...section,
-            enrolledCount: (section.enrolledCount ?? 0) + 1,
-          },
-        };
-
-        const updated = [
-          ...(localFallbackEnrollments || initialMockEnrollments),
-          newEnrollment,
-        ];
-        setLocalFallbackEnrollments(updated);
-        return newEnrollment;
-      }
-
       return enrollCourseSection(sectionId);
     },
     onSuccess: (_data, sectionId) => {
-      const section = initialAvailableSections.find((s) => s.id === sectionId);
+      const section = availableSections.find((s) => s.id === sectionId);
       const courseName = section
         ? `${section.course.code} (${section.name})`
         : "course section";
       toast.success(`Successfully enrolled in ${courseName}`);
       queryClient.invalidateQueries({ queryKey: ["student-enrolled-courses"] });
+      queryClient.invalidateQueries({
+        queryKey: ["student-available-sections"],
+      });
     },
     onError: (err: unknown) => {
       const msg = extractErrorMessage(
@@ -174,21 +149,14 @@ export function EnrollmentView() {
   const dropMutation = useMutation({
     mutationFn: async (enrollmentId: string) => {
       setDroppingEnrollmentId(enrollmentId);
-      // If in demo fallback mode, emulate locally
-      if (localFallbackEnrollments !== null || isError) {
-        await new Promise((res) => setTimeout(res, 500));
-        const updated = (
-          localFallbackEnrollments || initialMockEnrollments
-        ).filter((e) => e.id !== enrollmentId);
-        setLocalFallbackEnrollments(updated);
-        return { id: enrollmentId, status: "DROPPED" as const };
-      }
-
       return dropCourseEnrollment(enrollmentId);
     },
     onSuccess: () => {
       toast.success("Enrollment successfully dropped");
       queryClient.invalidateQueries({ queryKey: ["student-enrolled-courses"] });
+      queryClient.invalidateQueries({
+        queryKey: ["student-available-sections"],
+      });
     },
     onError: (err: unknown) => {
       const msg = extractErrorMessage(err, "Failed to drop enrollment");
@@ -201,7 +169,7 @@ export function EnrollmentView() {
 
   // Filtered sections for Catalog view
   const filteredSections = useMemo(() => {
-    return initialAvailableSections.filter((sec) => {
+    return availableSections.filter((sec) => {
       const isEnrolled = enrolledSectionIds.has(sec.id);
 
       // Search match
@@ -225,10 +193,28 @@ export function EnrollmentView() {
 
       return matchesSearch && matchesDept && matchesStatus;
     });
-  }, [searchQuery, selectedDept, statusFilter, enrolledSectionIds]);
+  }, [
+    availableSections,
+    searchQuery,
+    selectedDept,
+    statusFilter,
+    enrolledSectionIds,
+  ]);
+
+  const departments = useMemo(
+    () => [
+      "ALL",
+      ...new Set(
+        availableSections
+          .map((section) => section.course.department)
+          .filter((department): department is string => Boolean(department)),
+      ),
+    ],
+    [availableSections],
+  );
 
   // Loading skeleton state
-  if (isLoading && localFallbackEnrollments === null) {
+  if (isLoading || isSectionsLoading) {
     return (
       <main className="flex flex-1 flex-col gap-6 p-4 md:p-6 lg:gap-8 max-w-7xl mx-auto w-full animate-pulse">
         <Skeleton className="h-28 w-full rounded-2xl" />
@@ -254,28 +240,38 @@ export function EnrollmentView() {
         enrolledCount={activeEnrollments.length}
         totalCredits={totalRegisteredCredits}
         maxCredits={21}
-        semesterName="Fall 2026"
+        semesterName={
+          availableSections[0]?.semester?.name || "Current semester"
+        }
       />
 
-      {/* Offline / Server Error notice with interactive demo fallback */}
-      {isError && localFallbackEnrollments === null && (
+      {/* Backend errors are shown without substituting demo catalog data. */}
+      {(isError || isSectionsError) && (
         <Card className="border-amber-500/30 bg-amber-500/5 shadow-xs">
           <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-start gap-3">
               <AlertTriangle className="size-5 text-amber-500 shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-semibold text-foreground">
-                  Backend connection unavailable
+                  Backend data unavailable
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {error
-                    ? extractErrorMessage(
-                        error,
-                        "The local backend server (port 5000) is currently offline.",
-                      )
-                    : "The local backend server (port 5000) is currently offline."}{" "}
-                  You can launch interactive demo mode to test enrolling,
-                  duplicate checking, and dropping.
+                  {[
+                    isError
+                      ? extractErrorMessage(
+                          error,
+                          "Could not load your enrollments.",
+                        )
+                      : null,
+                    isSectionsError
+                      ? extractErrorMessage(
+                          sectionsError,
+                          "Could not load available course sections.",
+                        )
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                 </p>
               </div>
             </div>
@@ -283,24 +279,20 @@ export function EnrollmentView() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => refetch()}
-                disabled={isFetching}
+                onClick={() => {
+                  refetch();
+                  refetchSections();
+                }}
+                disabled={isFetching || isSectionsFetching}
                 className="h-8 text-xs cursor-pointer"
               >
                 <RefreshCw
-                  className={cn("size-3.5 mr-1", isFetching && "animate-spin")}
+                  className={cn(
+                    "size-3.5 mr-1",
+                    (isFetching || isSectionsFetching) && "animate-spin",
+                  )}
                 />
                 Retry
-              </Button>
-              <Button
-                size="sm"
-                onClick={() =>
-                  setLocalFallbackEnrollments(initialMockEnrollments)
-                }
-                className="h-8 gap-1.5 text-xs bg-amber-600 hover:bg-amber-700 cursor-pointer text-white"
-              >
-                <Sparkles className="size-3.5" />
-                Launch Interactive Demo
               </Button>
             </div>
           </CardContent>
@@ -322,7 +314,7 @@ export function EnrollmentView() {
             <BookOpen className="size-3.5" />
             <span>Course Catalog</span>
             <span className="rounded-full bg-background/20 px-1.5 py-0.2 text-[10px]">
-              {initialAvailableSections.length}
+              {availableSections.length}
             </span>
           </button>
 
@@ -344,14 +336,6 @@ export function EnrollmentView() {
         </div>
 
         {/* Demo Indicator */}
-        {localFallbackEnrollments !== null && (
-          <Badge
-            variant="outline"
-            className="text-xs border-amber-500/40 text-amber-600 bg-amber-500/10"
-          >
-            Interactive Demo Mode
-          </Badge>
-        )}
       </div>
 
       {activeTab === "catalog" ? (
@@ -373,7 +357,7 @@ export function EnrollmentView() {
             {/* Department and Status filter chips */}
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center rounded-lg border border-border/60 bg-muted/30 p-0.5">
-                {(["ALL", "CSE", "MAT"] as const).map((dept) => (
+                {departments.map((dept) => (
                   <button
                     key={dept}
                     type="button"
@@ -415,7 +399,13 @@ export function EnrollmentView() {
           </div>
 
           {/* Catalog Grid */}
-          {filteredSections.length > 0 ? (
+          {isSectionsError ? (
+            <Card className="border-border/60 shadow-xs">
+              <CardContent className="p-8 text-center text-sm text-muted-foreground">
+                The course catalog could not be loaded. Use Retry to try again.
+              </CardContent>
+            </Card>
+          ) : filteredSections.length > 0 ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
               {filteredSections.map((sec) => {
                 const isEnrolledThis = enrolledSectionIds.has(sec.id);

@@ -26,7 +26,7 @@ interface CurrentCoursesProps {
 export function CurrentCourses({ courses = [] }: CurrentCoursesProps) {
   const hasCourses = courses && courses.length > 0;
   const totalCredits = hasCourses
-    ? courses.reduce((acc, c) => acc + (c.credit || 3), 0)
+    ? courses.reduce((acc, c) => acc + c.credit, 0)
     : 0;
 
   return (

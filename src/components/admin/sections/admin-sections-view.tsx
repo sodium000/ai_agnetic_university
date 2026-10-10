@@ -3,8 +3,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
-  BookOpen,
-  Calendar,
   Clock,
   GraduationCap,
   Layers,
@@ -12,21 +10,14 @@ import {
   Plus,
   RefreshCw,
   Trash2,
-  Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -46,7 +37,9 @@ import {
   fetchAdminSemesters,
 } from "@/services/admin.service";
 import type {
-  AdminSection,
+  AdminCourse,
+  AdminFacultyMember,
+  AdminSemester,
   CreateSectionPayload,
   DayOfWeek,
   SectionSchedule,
@@ -97,7 +90,8 @@ export function AdminSectionsView() {
       queryClient.invalidateQueries({ queryKey: ["admin", "sections"] });
       setCreateOpen(false);
     },
-    onError: (err: any) => toast.error(err.message || "Failed to create section"),
+    onError: (err: Error) =>
+      toast.error(err.message || "Failed to create section"),
   });
 
   return (
@@ -118,7 +112,8 @@ export function AdminSectionsView() {
             Course Sections & Timetable
           </h1>
           <p className="text-sm text-muted-foreground">
-            Schedule section cohorts, classroom rooms, building allocations, and faculty lecturers.
+            Schedule section cohorts, classroom rooms, building allocations, and
+            faculty lecturers.
           </p>
         </div>
 
@@ -132,14 +127,22 @@ export function AdminSectionsView() {
             <RefreshCw className="size-3.5" />
           </Button>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger render={<Button size="sm" className="gap-2 text-xs cursor-pointer shadow-xs" />}>
+            <DialogTrigger
+              render={
+                <Button
+                  size="sm"
+                  className="gap-2 text-xs cursor-pointer shadow-xs"
+                />
+              }
+            >
               <Plus className="size-3.5" /> Create Section
             </DialogTrigger>
             <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create Course Section</DialogTitle>
                 <DialogDescription>
-                  Configure section capacity, assigned instructor, and weekly class timetable.
+                  Configure section capacity, assigned instructor, and weekly
+                  class timetable.
                 </DialogDescription>
               </DialogHeader>
               <SectionFormDialog
@@ -164,7 +167,9 @@ export function AdminSectionsView() {
         ) : sections.length === 0 ? (
           <div className="col-span-full py-16 text-center">
             <Layers className="size-10 mx-auto text-muted-foreground/40 mb-2" />
-            <p className="font-medium text-foreground">No course sections scheduled</p>
+            <p className="font-medium text-foreground">
+              No course sections scheduled
+            </p>
           </div>
         ) : (
           sections.map((sec) => (
@@ -191,7 +196,9 @@ export function AdminSectionsView() {
                     <span className="text-xs font-semibold text-foreground font-mono">
                       {sec.enrolledCount ?? 0} / {sec.capacity}
                     </span>
-                    <p className="text-[10px] text-muted-foreground">Capacity</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Capacity
+                    </p>
                   </div>
                 </div>
               </CardHeader>
@@ -199,7 +206,7 @@ export function AdminSectionsView() {
                 <div className="flex items-center justify-between border-t pt-2.5">
                   <span className="flex items-center gap-1.5 font-medium text-foreground">
                     <GraduationCap className="size-3.5 text-primary" />
-                    {sec.faculty?.name || "Dr. Rahim"}
+                    {sec.faculty?.name || "Unassigned faculty"}
                   </span>
                   <span className="text-[11px] text-muted-foreground">
                     {sec.faculty?.designation || "Instructor"}
@@ -209,20 +216,25 @@ export function AdminSectionsView() {
                 {/* Schedules */}
                 <div className="space-y-1.5 bg-muted/40 p-2.5 rounded-lg border">
                   <div className="text-[11px] font-medium text-foreground flex items-center gap-1">
-                    <Clock className="size-3 text-muted-foreground" /> Timetable Schedules
+                    <Clock className="size-3 text-muted-foreground" /> Timetable
+                    Schedules
                   </div>
                   {sec.schedules && sec.schedules.length > 0 ? (
                     <div className="space-y-1">
-                      {sec.schedules.map((sch, i) => (
+                      {sec.schedules.map((sch) => (
                         <div
-                          key={i}
+                          key={
+                            sch.id ??
+                            `${sch.dayOfWeek}-${sch.startTime}-${sch.endTime}`
+                          }
                           className="flex items-center justify-between text-[11px] text-muted-foreground"
                         >
                           <span className="font-medium text-foreground">
                             {sch.dayOfWeek} {sch.startTime} – {sch.endTime}
                           </span>
                           <span className="flex items-center gap-1">
-                            <MapPin className="size-3" /> {sch.room}, {sch.building}
+                            <MapPin className="size-3" /> {sch.room},{" "}
+                            {sch.building}
                           </span>
                         </div>
                       ))}
@@ -250,18 +262,45 @@ function SectionFormDialog({
   isLoading,
   onClose,
 }: {
-  courses: any[];
-  semesters: any[];
-  faculty: any[];
+  courses: AdminCourse[];
+  semesters: AdminSemester[];
+  faculty: AdminFacultyMember[];
   onSubmit: (p: CreateSectionPayload) => void;
   isLoading: boolean;
   onClose: () => void;
 }) {
   const [name, setName] = useState("Section A");
-  const [courseId, setCourseId] = useState(courses[0]?.id || "course-cse301");
-  const [semesterId, setSemesterId] = useState(semesters[0]?.id || "sem-fall-2026");
-  const [facultyId, setFacultyId] = useState(faculty[0]?.id || "fac-1");
+  const [courseId, setCourseId] = useState("");
+  const [semesterId, setSemesterId] = useState("");
+  const [facultyId, setFacultyId] = useState("");
   const [capacity, setCapacity] = useState(40);
+
+  useEffect(() => {
+    if (
+      courses.length > 0 &&
+      !courses.some((course) => course.id === courseId)
+    ) {
+      setCourseId(courses[0].id);
+    }
+  }, [courseId, courses]);
+
+  useEffect(() => {
+    if (
+      semesters.length > 0 &&
+      !semesters.some((semester) => semester.id === semesterId)
+    ) {
+      setSemesterId(semesters[0].id);
+    }
+  }, [semesterId, semesters]);
+
+  useEffect(() => {
+    if (
+      faculty.length > 0 &&
+      !faculty.some((member) => member.id === facultyId)
+    ) {
+      setFacultyId(faculty[0].id);
+    }
+  }, [faculty, facultyId]);
 
   const [schedules, setSchedules] = useState<SectionSchedule[]>([
     {
@@ -270,6 +309,7 @@ function SectionFormDialog({
       endTime: "10:30",
       room: "Room 301",
       building: "CSE Building",
+      id: "draft-schedule-0",
     },
   ]);
 
@@ -282,6 +322,7 @@ function SectionFormDialog({
         endTime: "10:30",
         room: "Room 301",
         building: "CSE Building",
+        id: crypto.randomUUID(),
       },
     ]);
   };
@@ -291,7 +332,11 @@ function SectionFormDialog({
     setSchedules((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const updateSchedule = (index: number, field: keyof SectionSchedule, val: any) => {
+  const updateSchedule = (
+    index: number,
+    field: keyof SectionSchedule,
+    val: string,
+  ) => {
     setSchedules((prev) => {
       const copy = [...prev];
       copy[index] = { ...copy[index], [field]: val };
@@ -301,7 +346,13 @@ function SectionFormDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !courseId || !semesterId || !facultyId || capacity <= 0) {
+    if (
+      !name.trim() ||
+      !courses.some((course) => course.id === courseId) ||
+      !semesters.some((semester) => semester.id === semesterId) ||
+      !faculty.some((member) => member.id === facultyId) ||
+      capacity <= 0
+    ) {
       toast.error("Please fill in required fields.");
       return;
     }
@@ -311,7 +362,15 @@ function SectionFormDialog({
       semesterId,
       facultyId,
       capacity,
-      schedules,
+      schedules: schedules.map(
+        ({ dayOfWeek, startTime, endTime, room, building }) => ({
+          dayOfWeek,
+          startTime,
+          endTime,
+          room,
+          building,
+        }),
+      ),
     });
   };
 
@@ -333,6 +392,9 @@ function SectionFormDialog({
             value={courseId}
             onChange={(e) => setCourseId(e.target.value)}
           >
+            {courses.length === 0 && (
+              <option value="">No courses available</option>
+            )}
             {courses.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.code} — {c.title}
@@ -347,6 +409,9 @@ function SectionFormDialog({
             value={semesterId}
             onChange={(e) => setSemesterId(e.target.value)}
           >
+            {semesters.length === 0 && (
+              <option value="">No semesters available</option>
+            )}
             {semesters.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name} ({s.year})
@@ -364,6 +429,9 @@ function SectionFormDialog({
             value={facultyId}
             onChange={(e) => setFacultyId(e.target.value)}
           >
+            {faculty.length === 0 && (
+              <option value="">No faculty available</option>
+            )}
             {faculty.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name} ({f.designation})
@@ -401,7 +469,10 @@ function SectionFormDialog({
 
         <div className="space-y-3">
           {schedules.map((sch, idx) => (
-            <div key={idx} className="p-3 border rounded-md bg-muted/30 space-y-2 relative">
+            <div
+              key={sch.id}
+              className="p-3 border rounded-md bg-muted/30 space-y-2 relative"
+            >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-medium text-foreground">
                   Slot #{idx + 1}
@@ -425,7 +496,13 @@ function SectionFormDialog({
                   <select
                     className="w-full h-8 rounded-md border border-input bg-background px-2 py-1 text-xs"
                     value={sch.dayOfWeek}
-                    onChange={(e) => updateSchedule(idx, "dayOfWeek", e.target.value as DayOfWeek)}
+                    onChange={(e) =>
+                      updateSchedule(
+                        idx,
+                        "dayOfWeek",
+                        e.target.value as DayOfWeek,
+                      )
+                    }
                   >
                     {DAYS_OF_WEEK.map((d) => (
                       <option key={d} value={d}>
@@ -440,7 +517,9 @@ function SectionFormDialog({
                     type="time"
                     className="h-8 text-xs"
                     value={sch.startTime}
-                    onChange={(e) => updateSchedule(idx, "startTime", e.target.value)}
+                    onChange={(e) =>
+                      updateSchedule(idx, "startTime", e.target.value)
+                    }
                   />
                 </div>
                 <div>
@@ -449,7 +528,9 @@ function SectionFormDialog({
                     type="time"
                     className="h-8 text-xs"
                     value={sch.endTime}
-                    onChange={(e) => updateSchedule(idx, "endTime", e.target.value)}
+                    onChange={(e) =>
+                      updateSchedule(idx, "endTime", e.target.value)
+                    }
                   />
                 </div>
               </div>
@@ -461,7 +542,9 @@ function SectionFormDialog({
                     className="h-8 text-xs"
                     placeholder="Room 301"
                     value={sch.room}
-                    onChange={(e) => updateSchedule(idx, "room", e.target.value)}
+                    onChange={(e) =>
+                      updateSchedule(idx, "room", e.target.value)
+                    }
                   />
                 </div>
                 <div>
@@ -470,7 +553,9 @@ function SectionFormDialog({
                     className="h-8 text-xs"
                     placeholder="CSE Building"
                     value={sch.building}
-                    onChange={(e) => updateSchedule(idx, "building", e.target.value)}
+                    onChange={(e) =>
+                      updateSchedule(idx, "building", e.target.value)
+                    }
                   />
                 </div>
               </div>

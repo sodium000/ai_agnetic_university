@@ -60,7 +60,10 @@ export function NavUser({ userRole }: { userRole: AuthUser["role"] }) {
           const profile = await fetchFacultyProfile();
           currentUser = { ...profile.user, role: "FACULTY" };
         } else if (isMatchingRole && cachedUser) {
-          currentUser = await fetchUserInfo(cachedUser.id);
+          currentUser =
+            cachedUser.id === cachedUser.email
+              ? cachedUser
+              : await fetchUserInfo(cachedUser.id);
         }
 
         if (currentUser) {

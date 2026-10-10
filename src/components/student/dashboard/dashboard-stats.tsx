@@ -61,40 +61,61 @@ function StatCard({
 
 interface DashboardStatsProps {
   stats: DashboardStatsType;
+  availability?: {
+    cgpa: boolean;
+    credits: boolean;
+    courses: boolean;
+    attendance: boolean;
+  };
 }
 
-export function DashboardStats({ stats }: DashboardStatsProps) {
-  const creditPercentage = Math.round(
-    (stats.completedCredits / stats.totalCredits) * 100,
-  );
+export function DashboardStats({ stats, availability }: DashboardStatsProps) {
+  const isAvailable = {
+    cgpa: availability?.cgpa ?? true,
+    credits: availability?.credits ?? true,
+    courses: availability?.courses ?? true,
+    attendance: availability?.attendance ?? true,
+  };
+  const creditPercentage =
+    isAvailable.credits && stats.totalCredits > 0
+      ? Math.round((stats.completedCredits / stats.totalCredits) * 100)
+      : null;
 
   const statsItems: StatCardProps[] = [
     {
       title: "Current CGPA",
-      value: stats.cgpa.toFixed(2),
-      badgeText: "/ 4.00",
-      description: "Overall academic performance",
+      value: isAvailable.cgpa ? stats.cgpa.toFixed(2) : "—",
+      badgeText: isAvailable.cgpa ? "/ 4.00" : undefined,
+      description: isAvailable.cgpa
+        ? "Overall academic performance"
+        : "Academic performance unavailable",
       icon: GraduationCap,
     },
     {
       title: "Completed Credits",
-      value: `${stats.completedCredits} / ${stats.totalCredits}`,
-      badgeText: `${creditPercentage}%`,
-      description: `${creditPercentage}% of degree requirements met`,
+      value: isAvailable.credits
+        ? `${stats.completedCredits} / ${stats.totalCredits}`
+        : "—",
+      badgeText: creditPercentage === null ? undefined : `${creditPercentage}%`,
+      description:
+        creditPercentage === null
+          ? "Credit progress unavailable"
+          : `${creditPercentage}% of degree requirements met`,
       icon: BookOpen,
     },
     {
       title: "Current Courses",
-      value: String(stats.currentCourses),
+      value: isAvailable.courses ? String(stats.currentCourses) : "—",
       badgeText: "courses",
       description: "Active courses enrolled this semester",
       icon: NotebookPen,
     },
     {
       title: "Overall Attendance",
-      value: `${stats.attendance}%`,
-      description:
-        stats.attendance >= 80
+      value: isAvailable.attendance ? `${stats.attendance}%` : "—",
+      description: !isAvailable.attendance
+        ? "No attendance records available"
+        : stats.attendance >= 80
           ? "Satisfactory attendance record"
           : "Action required to meet threshold",
       icon: CheckCircle2,

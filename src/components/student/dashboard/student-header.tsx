@@ -48,7 +48,7 @@ export function StudentHeader({
             <span>Student Portal</span>
             <span>•</span>
             <span className="font-medium text-foreground">
-              {student?.departmentCode || "CSE"}
+              {student?.departmentCode || "Department unavailable"}
             </span>
           </div>
 
@@ -131,18 +131,19 @@ export function StudentHeader({
                   {name}
                 </h2>
                 <Badge variant="secondary" className="font-mono text-xs">
-                  {student?.studentId || "STUDENT-ID"}
+                  {student?.studentId || "—"}
                 </Badge>
               </div>
 
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground sm:text-sm">
                 <span className="font-medium text-foreground">
-                  {student?.department || "Computer Science & Engineering"}
+                  {student?.department || "Department unavailable"}
                 </span>
                 <span>•</span>
                 <span>
-                  Year {student?.currentYear || 3}, Semester{" "}
-                  {student?.currentSemester || 6}
+                  {student?.currentYear && student?.currentSemester
+                    ? `Year ${student.currentYear}, Semester ${student.currentSemester}`
+                    : "Academic year and semester unavailable"}
                 </span>
               </div>
             </div>
@@ -153,21 +154,21 @@ export function StudentHeader({
               <div className="space-y-0.5">
                 <span className="text-muted-foreground">Program</span>
                 <p className="font-medium text-foreground">
-                  {student?.programCode || "BSC-CSE"}
+                  {student?.programCode || "—"}
                 </p>
               </div>
 
               <div className="space-y-0.5">
                 <span className="text-muted-foreground">Admission Year</span>
                 <p className="font-medium text-foreground">
-                  {student?.admissionYear || 2023}
+                  {student?.admissionYear || "—"}
                 </p>
               </div>
 
               <div className="col-span-2 space-y-0.5 sm:col-span-1">
                 <span className="text-muted-foreground">Student Email</span>
                 <p className="truncate font-medium text-foreground max-w-[200px]">
-                  {student?.email || "student@university.edu"}
+                  {student?.email || "—"}
                 </p>
               </div>
             </div>

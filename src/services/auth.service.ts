@@ -212,11 +212,12 @@ export async function resendRegistrationOtp(email: string) {
 }
 
 export async function fetchUserInfo(userId: string): Promise<AuthUser> {
-  const response = await apiFetchFirst<{ success: boolean; data: AuthUser }>([
-    `/api/v1/auth/me/${encodeURIComponent(userId)}`,
+  const response = await apiFetch<{ success: boolean; data: AuthUser | null }>(
     `/auth/api/v1/me/${encodeURIComponent(userId)}`,
-    `/api/v1/me/${encodeURIComponent(userId)}`,
-  ]);
+  );
+  if (!response.data) {
+    throw new Error("The signed-in user could not be found.");
+  }
   return response.data;
 }
 

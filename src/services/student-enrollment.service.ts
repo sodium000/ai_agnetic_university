@@ -307,12 +307,29 @@ export async function fetchEnrolledCourses(
   throw new Error(response?.message || "Failed to load enrolled courses");
 }
 
+/**
+ * GET /api/v1/student/me/sections
+ * Returns course sections offered in the active semester.
+ */
+export async function fetchAvailableSections(): Promise<SectionData[]> {
+  const response = await apiFetch<{
+    success?: boolean;
+    message?: string;
+    data?: SectionData[];
+  }>("/api/v1/student/me/sections");
+  if (Array.isArray(response?.data)) return response.data;
+  throw new Error(
+    response?.message || "Failed to load available course sections",
+  );
+}
+
 export async function fetchStudentCourseDetail(
   courseId: string,
 ): Promise<EnrolledCourseEnrollment> {
-  const response = await apiFetch<{ data?: EnrolledCourseEnrollment; message?: string }>(
-    `/api/v1/student/me/courses/${encodeURIComponent(courseId)}`,
-  );
+  const response = await apiFetch<{
+    data?: EnrolledCourseEnrollment;
+    message?: string;
+  }>(`/api/v1/student/me/courses/${encodeURIComponent(courseId)}`);
 
   if (response?.data) return response.data;
   throw new Error(response?.message || "Failed to load course detail");
@@ -366,9 +383,10 @@ export async function dropCourseEnrollment(
  * Returns all enrollments for the student
  */
 export async function fetchStudentEnrollments() {
-  const response = await apiFetch<{ success: boolean; data: EnrolledCourseEnrollment[] }>(
-    "/api/v1/student/me/enrollments",
-  );
+  const response = await apiFetch<{
+    success: boolean;
+    data: EnrolledCourseEnrollment[];
+  }>("/api/v1/student/me/enrollments");
   return response?.data || [];
 }
 
@@ -432,9 +450,11 @@ export async function fetchStudentAssignments() {
 }
 
 export async function fetchStudentAssignmentDetail(assignmentId: string) {
-  const response = await apiFetch<{ success?: boolean; message?: string; data?: unknown }>(
-    `/api/v1/student/me/assignments/${encodeURIComponent(assignmentId)}`,
-  );
+  const response = await apiFetch<{
+    success?: boolean;
+    message?: string;
+    data?: unknown;
+  }>(`/api/v1/student/me/assignments/${encodeURIComponent(assignmentId)}`);
 
   if (response?.data) return response.data;
   throw new Error(response?.message || "Failed to load assignment detail");
@@ -457,6 +477,4 @@ export async function submitStudentAssignment(
   return response?.data;
 }
 
-
 export { extractErrorMessage };
-
