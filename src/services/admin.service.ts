@@ -31,11 +31,38 @@ interface ApiResponse<T> {
   data: T;
 }
 
+function extractArray<T>(res: unknown): T[] | null {
+  if (!res) return null;
+  if (Array.isArray(res)) return res;
+  const obj = res as Record<string, unknown>;
+  if (Array.isArray(obj.data)) return obj.data as T[];
+  if (obj.data && typeof obj.data === "object") {
+    const nested = obj.data as Record<string, unknown>;
+    if (Array.isArray(nested.data)) return nested.data as T[];
+    if (Array.isArray(nested.payments)) return nested.payments as T[];
+    if (Array.isArray(nested.enrollments)) return nested.enrollments as T[];
+    if (Array.isArray(nested.students)) return nested.students as T[];
+    if (Array.isArray(nested.faculty)) return nested.faculty as T[];
+    if (Array.isArray(nested.departments)) return nested.departments as T[];
+    if (Array.isArray(nested.programs)) return nested.programs as T[];
+    if (Array.isArray(nested.courses)) return nested.courses as T[];
+    if (Array.isArray(nested.semesters)) return nested.semesters as T[];
+    if (Array.isArray(nested.sections)) return nested.sections as T[];
+    if (Array.isArray(nested.result)) return nested.result as T[];
+  }
+  if (Array.isArray(obj.payments)) return obj.payments as T[];
+  if (Array.isArray(obj.enrollments)) return obj.enrollments as T[];
+  if (Array.isArray(obj.students)) return obj.students as T[];
+  if (Array.isArray(obj.result)) return obj.result as T[];
+  return null;
+}
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
 export async function fetchAdminDashboardStats(): Promise<AdminDashboardStats> {
   try {
-    const res = await apiFetch<ApiResponse<AdminDashboardStats>>("/api/v1/admin/dashboard");
+    const res =
+      await apiFetch<ApiResponse<AdminDashboardStats>>("/admin/dashboard");
     if (res?.data) return res.data;
   } catch (err) {
     console.warn("fetchAdminDashboardStats using fallback mock:", err);
@@ -55,9 +82,10 @@ export async function fetchAdminStudents(
     if (params?.search) query.set("search", params.search);
 
     const queryString = query.toString();
-    const url = `/api/v1/admin/students${queryString ? `?${queryString}` : ""}`;
-    const res = await apiFetch<ApiResponse<AdminStudent[]>>(url);
-    if (res?.data) return res.data;
+    const url = `/admin/students${queryString ? `?${queryString}` : ""}`;
+    const res = await apiFetch<unknown>(url);
+    const arr = extractArray<AdminStudent>(res);
+    if (arr !== null) return arr;
   } catch (err) {
     console.warn("fetchAdminStudents fallback to mock:", err);
   }
@@ -86,7 +114,7 @@ export async function createAdminStudent(
   payload: CreateStudentPayload,
 ): Promise<AdminStudent> {
   try {
-    const res = await apiFetch<ApiResponse<AdminStudent>>("/api/v1/admin/students", {
+    const res = await apiFetch<ApiResponse<AdminStudent>>("/admin/students", {
       method: "POST",
       body: payload,
     });
@@ -116,7 +144,9 @@ export async function createAdminStudent(
       phone: payload.phone,
       status: "ACTIVE",
     },
-    department: mockAdminDepartments.find((d) => d.id === payload.departmentId) || {
+    department: mockAdminDepartments.find(
+      (d) => d.id === payload.departmentId,
+    ) || {
       id: payload.departmentId,
       name: "Computer Science & Engineering",
       code: "CSE",
@@ -137,10 +167,13 @@ export async function updateAdminStudent(
   payload: UpdateStudentPayload,
 ): Promise<AdminStudent> {
   try {
-    const res = await apiFetch<ApiResponse<AdminStudent>>(`/api/v1/admin/students/${id}`, {
-      method: "PATCH",
-      body: payload,
-    });
+    const res = await apiFetch<ApiResponse<AdminStudent>>(
+      `/admin/students/${id}`,
+      {
+        method: "PATCH",
+        body: payload,
+      },
+    );
     if (res?.data) return res.data;
   } catch (err) {
     console.warn("updateAdminStudent fallback:", err);
@@ -170,7 +203,7 @@ export async function deleteAdminStudent(
 ): Promise<{ success: boolean; message: string }> {
   try {
     const res = await apiFetch<{ success: boolean; message: string }>(
-      `/api/v1/admin/students/${id}${hard ? "?hard=true" : ""}`,
+      `/admin/students/${id}${hard ? "?hard=true" : ""}`,
       { method: "DELETE" },
     );
     if (res) return res;
@@ -186,15 +219,19 @@ export async function deleteAdminStudent(
       mockAdminStudents[idx].user.status = "INACTIVE";
     }
   }
-  return { success: true, message: hard ? "Student deleted permanently" : "Student deactivated" };
+  return {
+    success: true,
+    message: hard ? "Student deleted permanently" : "Student deactivated",
+  };
 }
 
 // ── Faculty ───────────────────────────────────────────────────────────────────
 
 export async function fetchAdminFaculty(): Promise<AdminFacultyMember[]> {
   try {
-    const res = await apiFetch<ApiResponse<AdminFacultyMember[]>>("/api/v1/admin/faculty");
-    if (res?.data) return res.data;
+    const res = await apiFetch<unknown>("/admin/faculty");
+    const arr = extractArray<AdminFacultyMember>(res);
+    if (arr !== null) return arr;
   } catch (err) {
     console.warn("fetchAdminFaculty fallback:", err);
   }
@@ -205,10 +242,13 @@ export async function createAdminFaculty(
   payload: CreateFacultyPayload,
 ): Promise<AdminFacultyMember> {
   try {
-    const res = await apiFetch<ApiResponse<AdminFacultyMember>>("/api/v1/admin/faculty", {
-      method: "POST",
-      body: payload,
-    });
+    const res = await apiFetch<ApiResponse<AdminFacultyMember>>(
+      "/admin/faculty",
+      {
+        method: "POST",
+        body: payload,
+      },
+    );
     if (res?.data) return res.data;
   } catch (err) {
     console.warn("createAdminFaculty fallback:", err);
@@ -242,8 +282,9 @@ export async function createAdminFaculty(
 
 export async function fetchAdminDepartments(): Promise<AdminDepartment[]> {
   try {
-    const res = await apiFetch<ApiResponse<AdminDepartment[]>>("/api/v1/admin/departments");
-    if (res?.data) return res.data;
+    const res = await apiFetch<unknown>("/admin/departments");
+    const arr = extractArray<AdminDepartment>(res);
+    if (arr !== null) return arr;
   } catch (err) {
     console.warn("fetchAdminDepartments fallback:", err);
   }
@@ -254,10 +295,13 @@ export async function createAdminDepartment(
   payload: CreateDepartmentPayload,
 ): Promise<AdminDepartment> {
   try {
-    const res = await apiFetch<ApiResponse<AdminDepartment>>("/api/v1/admin/departments", {
-      method: "POST",
-      body: payload,
-    });
+    const res = await apiFetch<ApiResponse<AdminDepartment>>(
+      "/admin/departments",
+      {
+        method: "POST",
+        body: payload,
+      },
+    );
     if (res?.data) return res.data;
   } catch (err) {
     console.warn("createAdminDepartment fallback:", err);
@@ -282,10 +326,13 @@ export async function updateAdminDepartment(
   payload: UpdateDepartmentPayload,
 ): Promise<AdminDepartment> {
   try {
-    const res = await apiFetch<ApiResponse<AdminDepartment>>(`/api/v1/admin/departments/${id}`, {
-      method: "PATCH",
-      body: payload,
-    });
+    const res = await apiFetch<ApiResponse<AdminDepartment>>(
+      `/admin/departments/${id}`,
+      {
+        method: "PATCH",
+        body: payload,
+      },
+    );
     if (res?.data) return res.data;
   } catch (err) {
     console.warn("updateAdminDepartment fallback:", err);
@@ -303,8 +350,9 @@ export async function updateAdminDepartment(
 
 export async function fetchAdminPrograms(): Promise<AdminProgram[]> {
   try {
-    const res = await apiFetch<ApiResponse<AdminProgram[]>>("/api/v1/admin/programs");
-    if (res?.data) return res.data;
+    const res = await apiFetch<unknown>("/admin/programs");
+    const arr = extractArray<AdminProgram>(res);
+    if (arr !== null) return arr;
   } catch (err) {
     console.warn("fetchAdminPrograms fallback:", err);
   }
@@ -315,7 +363,7 @@ export async function createAdminProgram(
   payload: CreateProgramPayload,
 ): Promise<AdminProgram> {
   try {
-    const res = await apiFetch<ApiResponse<AdminProgram>>("/api/v1/admin/programs", {
+    const res = await apiFetch<ApiResponse<AdminProgram>>("/admin/programs", {
       method: "POST",
       body: payload,
     });
@@ -342,8 +390,9 @@ export async function createAdminProgram(
 
 export async function fetchAdminCourses(): Promise<AdminCourse[]> {
   try {
-    const res = await apiFetch<ApiResponse<AdminCourse[]>>("/api/v1/admin/courses");
-    if (res?.data) return res.data;
+    const res = await apiFetch<unknown>("/admin/courses");
+    const arr = extractArray<AdminCourse>(res);
+    if (arr !== null) return arr;
   } catch (err) {
     console.warn("fetchAdminCourses fallback:", err);
   }
@@ -354,7 +403,7 @@ export async function createAdminCourse(
   payload: CreateCoursePayload,
 ): Promise<AdminCourse> {
   try {
-    const res = await apiFetch<ApiResponse<AdminCourse>>("/api/v1/admin/courses", {
+    const res = await apiFetch<ApiResponse<AdminCourse>>("/admin/courses", {
       method: "POST",
       body: payload,
     });
@@ -383,8 +432,9 @@ export async function createAdminCourse(
 
 export async function fetchAdminSemesters(): Promise<AdminSemester[]> {
   try {
-    const res = await apiFetch<ApiResponse<AdminSemester[]>>("/api/v1/admin/semesters");
-    if (res?.data) return res.data;
+    const res = await apiFetch<unknown>("/admin/semesters");
+    const arr = extractArray<AdminSemester>(res);
+    if (arr !== null) return arr;
   } catch (err) {
     console.warn("fetchAdminSemesters fallback:", err);
   }
@@ -395,7 +445,7 @@ export async function createAdminSemester(
   payload: CreateSemesterPayload,
 ): Promise<AdminSemester> {
   try {
-    const res = await apiFetch<ApiResponse<AdminSemester>>("/api/v1/admin/semesters", {
+    const res = await apiFetch<ApiResponse<AdminSemester>>("/admin/semesters", {
       method: "POST",
       body: payload,
     });
@@ -420,8 +470,9 @@ export async function createAdminSemester(
 
 export async function fetchAdminSections(): Promise<AdminSection[]> {
   try {
-    const res = await apiFetch<ApiResponse<AdminSection[]>>("/api/v1/admin/sections");
-    if (res?.data) return res.data;
+    const res = await apiFetch<unknown>("/admin/sections");
+    const arr = extractArray<AdminSection>(res);
+    if (arr !== null) return arr;
   } catch (err) {
     console.warn("fetchAdminSections fallback:", err);
   }
@@ -432,7 +483,7 @@ export async function createAdminSection(
   payload: CreateSectionPayload,
 ): Promise<AdminSection> {
   try {
-    const res = await apiFetch<ApiResponse<AdminSection>>("/api/v1/admin/sections", {
+    const res = await apiFetch<ApiResponse<AdminSection>>("/admin/sections", {
       method: "POST",
       body: payload,
     });
@@ -465,8 +516,9 @@ export async function createAdminSection(
 
 export async function fetchAdminEnrollments(): Promise<AdminEnrollment[]> {
   try {
-    const res = await apiFetch<ApiResponse<AdminEnrollment[]>>("/api/v1/admin/enrollments");
-    if (res?.data) return res.data;
+    const res = await apiFetch<unknown>("/admin/enrollments");
+    const arr = extractArray<AdminEnrollment>(res);
+    if (arr !== null) return arr;
   } catch (err) {
     console.warn("fetchAdminEnrollments fallback:", err);
   }
@@ -477,16 +529,21 @@ export async function forceEnrollStudent(
   payload: ForceEnrollPayload,
 ): Promise<AdminEnrollment> {
   try {
-    const res = await apiFetch<ApiResponse<AdminEnrollment>>("/api/v1/admin/enrollments", {
-      method: "POST",
-      body: payload,
-    });
+    const res = await apiFetch<ApiResponse<AdminEnrollment>>(
+      "/admin/enrollments",
+      {
+        method: "POST",
+        body: payload,
+      },
+    );
     if (res?.data) return res.data;
   } catch (err) {
     console.warn("forceEnrollStudent fallback:", err);
   }
 
-  const student = mockAdminStudents.find((s) => s.id === payload.studentId || s.studentId === payload.studentId);
+  const student = mockAdminStudents.find(
+    (s) => s.id === payload.studentId || s.studentId === payload.studentId,
+  );
   const section = mockAdminSections.find((sec) => sec.id === payload.sectionId);
 
   const newEnrollment: AdminEnrollment = {
@@ -500,7 +557,9 @@ export async function forceEnrollStudent(
           id: student.id,
           studentId: student.studentId,
           user: { name: student.user.name, email: student.user.email },
-          department: student.department ? { code: student.department.code, name: student.department.name } : undefined,
+          department: student.department
+            ? { code: student.department.code, name: student.department.name }
+            : undefined,
         }
       : {
           id: payload.studentId,
@@ -532,8 +591,9 @@ export async function forceEnrollStudent(
 
 export async function fetchAdminPayments(): Promise<AdminPayment[]> {
   try {
-    const res = await apiFetch<ApiResponse<AdminPayment[]>>("/api/v1/admin/payments");
-    if (res?.data) return res.data;
+    const res = await apiFetch<unknown>("/admin/payments");
+    const arr = extractArray<AdminPayment>(res);
+    if (arr !== null) return arr;
   } catch (err) {
     console.warn("fetchAdminPayments fallback:", err);
   }
@@ -544,7 +604,8 @@ export async function fetchAdminPayments(): Promise<AdminPayment[]> {
 
 export async function fetchAdminReports(): Promise<AdminSystemReport> {
   try {
-    const res = await apiFetch<ApiResponse<AdminSystemReport>>("/api/v1/admin/reports");
+    const res =
+      await apiFetch<ApiResponse<AdminSystemReport>>("/admin/reports");
     if (res?.data) return res.data;
   } catch (err) {
     console.warn("fetchAdminReports fallback:", err);
@@ -631,7 +692,11 @@ export const mockAdminPrograms: AdminProgram[] = [
     departmentId: "dept-cse",
     durationYears: 4,
     totalCredits: 140,
-    department: { id: "dept-cse", name: "Computer Science & Engineering", code: "CSE" },
+    department: {
+      id: "dept-cse",
+      name: "Computer Science & Engineering",
+      code: "CSE",
+    },
     studentsCount: 520,
   },
   {
@@ -641,7 +706,11 @@ export const mockAdminPrograms: AdminProgram[] = [
     departmentId: "dept-cse",
     durationYears: 2,
     totalCredits: 36,
-    department: { id: "dept-cse", name: "Computer Science & Engineering", code: "CSE" },
+    department: {
+      id: "dept-cse",
+      name: "Computer Science & Engineering",
+      code: "CSE",
+    },
     studentsCount: 100,
   },
   {
@@ -651,7 +720,11 @@ export const mockAdminPrograms: AdminProgram[] = [
     departmentId: "dept-eee",
     durationYears: 4,
     totalCredits: 144,
-    department: { id: "dept-eee", name: "Electrical & Electronic Engineering", code: "EEE" },
+    department: {
+      id: "dept-eee",
+      name: "Electrical & Electronic Engineering",
+      code: "EEE",
+    },
     studentsCount: 380,
   },
   {
@@ -661,7 +734,11 @@ export const mockAdminPrograms: AdminProgram[] = [
     departmentId: "dept-bba",
     durationYears: 4,
     totalCredits: 128,
-    department: { id: "dept-bba", name: "Business Administration", code: "BBA" },
+    department: {
+      id: "dept-bba",
+      name: "Business Administration",
+      code: "BBA",
+    },
     studentsCount: 320,
   },
 ];
@@ -671,41 +748,61 @@ export const mockAdminCourses: AdminCourse[] = [
     id: "course-cse301",
     code: "CSE301",
     title: "Data Structures",
-    description: "Fundamental data structures, stacks, queues, trees, graphs, and algorithmic analysis",
+    description:
+      "Fundamental data structures, stacks, queues, trees, graphs, and algorithmic analysis",
     credit: 3.0,
     departmentId: "dept-cse",
     programId: "prog-bsc-cse",
-    department: { id: "dept-cse", name: "Computer Science & Engineering", code: "CSE" },
+    department: {
+      id: "dept-cse",
+      name: "Computer Science & Engineering",
+      code: "CSE",
+    },
   },
   {
     id: "course-cse311",
     code: "CSE311",
     title: "Database Management Systems",
-    description: "Relational database modeling, SQL, normalization, transactions, and indexing",
+    description:
+      "Relational database modeling, SQL, normalization, transactions, and indexing",
     credit: 3.0,
     departmentId: "dept-cse",
     programId: "prog-bsc-cse",
-    department: { id: "dept-cse", name: "Computer Science & Engineering", code: "CSE" },
+    department: {
+      id: "dept-cse",
+      name: "Computer Science & Engineering",
+      code: "CSE",
+    },
   },
   {
     id: "course-cse421",
     code: "CSE421",
     title: "Machine Learning & Neural Networks",
-    description: "Supervised & unsupervised learning, deep neural nets, and practical AI implementations",
+    description:
+      "Supervised & unsupervised learning, deep neural nets, and practical AI implementations",
     credit: 3.0,
     departmentId: "dept-cse",
     programId: "prog-bsc-cse",
-    department: { id: "dept-cse", name: "Computer Science & Engineering", code: "CSE" },
+    department: {
+      id: "dept-cse",
+      name: "Computer Science & Engineering",
+      code: "CSE",
+    },
   },
   {
     id: "course-eee201",
     code: "EEE201",
     title: "Circuit Analysis & Electronics",
-    description: "AC/DC circuit theorems, passive components, semiconductors, and transistor circuits",
+    description:
+      "AC/DC circuit theorems, passive components, semiconductors, and transistor circuits",
     credit: 4.0,
     departmentId: "dept-eee",
     programId: "prog-bsc-eee",
-    department: { id: "dept-eee", name: "Electrical & Electronic Engineering", code: "EEE" },
+    department: {
+      id: "dept-eee",
+      name: "Electrical & Electronic Engineering",
+      code: "EEE",
+    },
   },
 ];
 
@@ -751,8 +848,18 @@ export const mockAdminFaculty: AdminFacultyMember[] = [
     designation: "Associate Professor",
     specialization: "Artificial Intelligence",
     joiningDate: "2026-01-15",
-    department: { id: "dept-cse", name: "Computer Science & Engineering", code: "CSE" },
-    user: { id: "usr-fac-1", name: "Dr. Rahim", email: "rahim@university.edu", role: "FACULTY", status: "ACTIVE" },
+    department: {
+      id: "dept-cse",
+      name: "Computer Science & Engineering",
+      code: "CSE",
+    },
+    user: {
+      id: "usr-fac-1",
+      name: "Dr. Rahim",
+      email: "rahim@university.edu",
+      role: "FACULTY",
+      status: "ACTIVE",
+    },
   },
   {
     id: "fac-2",
@@ -765,8 +872,18 @@ export const mockAdminFaculty: AdminFacultyMember[] = [
     designation: "Professor & Chair",
     specialization: "Distributed Systems & Cloud Computing",
     joiningDate: "2024-08-01",
-    department: { id: "dept-cse", name: "Computer Science & Engineering", code: "CSE" },
-    user: { id: "usr-fac-2", name: "Prof. Sarah Jenkins", email: "sarah.j@university.edu", role: "FACULTY", status: "ACTIVE" },
+    department: {
+      id: "dept-cse",
+      name: "Computer Science & Engineering",
+      code: "CSE",
+    },
+    user: {
+      id: "usr-fac-2",
+      name: "Prof. Sarah Jenkins",
+      email: "sarah.j@university.edu",
+      role: "FACULTY",
+      status: "ACTIVE",
+    },
   },
   {
     id: "fac-3",
@@ -779,8 +896,18 @@ export const mockAdminFaculty: AdminFacultyMember[] = [
     designation: "Assistant Professor",
     specialization: "Signal Processing & IoT",
     joiningDate: "2025-02-10",
-    department: { id: "dept-eee", name: "Electrical & Electronic Engineering", code: "EEE" },
-    user: { id: "usr-fac-3", name: "Dr. Mahmud Hasan", email: "mahmud.h@university.edu", role: "FACULTY", status: "ACTIVE" },
+    department: {
+      id: "dept-eee",
+      name: "Electrical & Electronic Engineering",
+      code: "EEE",
+    },
+    user: {
+      id: "usr-fac-3",
+      name: "Dr. Mahmud Hasan",
+      email: "mahmud.h@university.edu",
+      role: "FACULTY",
+      status: "ACTIVE",
+    },
   },
 ];
 
@@ -805,8 +932,16 @@ export const mockAdminStudents: AdminStudent[] = [
       phone: "01711000000",
       status: "ACTIVE",
     },
-    department: { id: "dept-cse", name: "Computer Science & Engineering", code: "CSE" },
-    program: { id: "prog-bsc-cse", name: "B.Sc. in Computer Science", code: "BSC-CSE" },
+    department: {
+      id: "dept-cse",
+      name: "Computer Science & Engineering",
+      code: "CSE",
+    },
+    program: {
+      id: "prog-bsc-cse",
+      name: "B.Sc. in Computer Science",
+      code: "BSC-CSE",
+    },
     createdAt: "2026-01-10T10:00:00Z",
   },
   {
@@ -829,8 +964,16 @@ export const mockAdminStudents: AdminStudent[] = [
       phone: "01711000001",
       status: "ACTIVE",
     },
-    department: { id: "dept-cse", name: "Computer Science & Engineering", code: "CSE" },
-    program: { id: "prog-bsc-cse", name: "B.Sc. in Computer Science", code: "BSC-CSE" },
+    department: {
+      id: "dept-cse",
+      name: "Computer Science & Engineering",
+      code: "CSE",
+    },
+    program: {
+      id: "prog-bsc-cse",
+      name: "B.Sc. in Computer Science",
+      code: "BSC-CSE",
+    },
     createdAt: "2025-02-15T09:30:00Z",
   },
   {
@@ -853,8 +996,16 @@ export const mockAdminStudents: AdminStudent[] = [
       phone: "01711000002",
       status: "ACTIVE",
     },
-    department: { id: "dept-eee", name: "Electrical & Electronic Engineering", code: "EEE" },
-    program: { id: "prog-bsc-eee", name: "B.Sc. in Electrical Engineering", code: "BSC-EEE" },
+    department: {
+      id: "dept-eee",
+      name: "Electrical & Electronic Engineering",
+      code: "EEE",
+    },
+    program: {
+      id: "prog-bsc-eee",
+      name: "B.Sc. in Electrical Engineering",
+      code: "BSC-EEE",
+    },
     createdAt: "2024-01-20T11:00:00Z",
   },
 ];
@@ -952,7 +1103,11 @@ export const mockAdminEnrollments: AdminEnrollment[] = [
     section: {
       id: "sec-2",
       capacity: 35,
-      course: { code: "CSE311", title: "Database Management Systems", credit: 3.0 },
+      course: {
+        code: "CSE311",
+        title: "Database Management Systems",
+        credit: 3.0,
+      },
       semester: { name: "Fall 2026", year: 2026 },
       faculty: { name: "Prof. Sarah Jenkins" },
     },

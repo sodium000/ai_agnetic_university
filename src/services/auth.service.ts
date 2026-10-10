@@ -1,5 +1,4 @@
 import apiFetch from "@/lib/apiClient";
-import { getRoleDashboardPath, getRoleFromToken } from "@/lib/auth";
 
 export interface LoginPayload {
   email: string;
@@ -10,7 +9,7 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: "STUDENT" | "FACULTY" | "ADMIN";
+  role: "STUDENT" | "FACULTY" | "ADMIN" | "SUPER_ADMIN";
 }
 
 export interface LoginApiResponse {
@@ -24,39 +23,66 @@ export interface LoginApiResponse {
   };
 }
 
+/**
+ * POST /api/v1/login
+ * User login — sets HttpOnly cookies on the browser and returns tokens/user
+ */
 export async function loginUser(
   payload: LoginPayload,
 ): Promise<LoginApiResponse["data"]> {
-  const response = await apiFetch<LoginApiResponse>("/api/v1/auth/login", {
-    method: "POST",
-    body: payload,
-  });
-
-  if (response?.data?.user) {
-    return response.data;
+  let response: LoginApiResponse;
+  try {
+    response = await apiFetch<LoginApiResponse>("/api/v1/login", {
+      method: "POST",
+      body: payload,
+    });
+  } catch (primaryErr: unknown) {
+    // If backend mounted on /auth/api/v1/login, fallback gracefully
+    try {
+      response = await apiFetch<LoginApiResponse>("/auth/api/v1/login", {
+        method: "POST",
+        body: payload,
+      });
+    } catch {
+      throw primaryErr;
+    }
   }
 
-  const token = response.data?.accessToken;
-
-  if (token) {
-    const role = getRoleFromToken(token);
-
-    if (role) {
-      const path = getRoleDashboardPath(role);
-
-      if (typeof window !== "undefined") {
-        window.location.href = path;
-      }
-    }
+  if (response?.data?.user || response?.data?.accessToken) {
+    return response.data;
   }
 
   throw new Error(response?.message || "Login failed. Please try again.");
 }
 
+/**
+ * POST /api/auth/logout (Next.js) → backend /api/v1/logout
+ * Clears accessToken, refreshToken, and userRole on this origin.
+ */
 export async function logoutUser(): Promise<void> {
   try {
-    await apiFetch("/api/v1/auth/logout", { method: "POST" });
+    await fetch("/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    });
   } catch {}
+}
+
+/**
+ * POST /api/v1/refresh-token
+ * Refreshes the accessToken using the refreshToken cookie
+ */
+export async function refreshAccessToken(): Promise<{
+  accessToken: string;
+  refreshToken?: string;
+}> {
+  const response = await apiFetch<{
+    success: boolean;
+    data: { accessToken: string; refreshToken?: string };
+  }>("/api/v1/refresh-token", {
+    method: "POST",
+  });
+  return response.data;
 }
 
 export interface RegisterPayload {
@@ -71,9 +97,13 @@ export interface VerifyOtpPayload {
   otp: string;
 }
 
+/**
+ * Step 1: POST /api/v1/auth/register
+ * Sends 6-digit OTP to the user's email and saves pending info in Redis
+ */
 export async function registerUser(payload: RegisterPayload) {
   try {
-    return await apiFetch("/api/v1/auth/verifyUser", {
+    return await apiFetch("/api/v1/auth/register", {
       method: "POST",
       body: payload,
     });
@@ -84,9 +114,13 @@ export async function registerUser(payload: RegisterPayload) {
   }
 }
 
+/**
+ * Step 2: POST /api/v1/auth/verifyUser
+ * Verifies 6-digit OTP against Redis and creates the account
+ */
 export async function verifyRegistrationOtp(payload: VerifyOtpPayload) {
   try {
-    return await apiFetch("/api/v1/auth/register", {
+    return await apiFetch("/api/v1/auth/verifyUser", {
       method: "POST",
       body: payload,
     });
@@ -97,9 +131,12 @@ export async function verifyRegistrationOtp(payload: VerifyOtpPayload) {
   }
 }
 
+/**
+ * Resend OTP — calls Step 1 to send a fresh code to email
+ */
 export async function resendRegistrationOtp(email: string) {
   try {
-    return await apiFetch("/api/v1/auth/resend-registration-otp", {
+    return await apiFetch("/api/v1/auth/register", {
       method: "POST",
       body: { email },
     });
@@ -108,4 +145,41 @@ export async function resendRegistrationOtp(email: string) {
     const msg = err?.data?.message || err?.message || "Unable to resend OTP";
     throw new Error(msg);
   }
+}
+
+/**
+ * GET /api/v1/me/:userId
+ * Retrieves user info for a given ID
+ */
+export async function fetchUserInfo(userId: string): Promise<AuthUser> {
+  const response = await apiFetch<{ success: boolean; data: AuthUser }>(
+    `/api/v1/me/${encodeURIComponent(userId)}`,
+  );
+  return response.data;
+}
+
+/**
+ * POST /api/v1/forgot-password
+ * Sends password reset OTP to user email
+ */
+export async function forgotPassword(email: string) {
+  return await apiFetch("/api/v1/forgot-password", {
+    method: "POST",
+    body: { email },
+  });
+}
+
+/**
+ * POST /api/v1/reset-password
+ * Resets password with verified OTP
+ */
+export async function resetPassword(payload: {
+  email: string;
+  otp: string;
+  newPassword: string;
+}) {
+  return await apiFetch("/api/v1/reset-password", {
+    method: "POST",
+    body: payload,
+  });
 }

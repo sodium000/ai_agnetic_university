@@ -160,15 +160,22 @@ function AttendanceContent() {
             ) : studentList.length > 0 ? (
               studentList.map((student) => {
                 const current = attendance[student.id];
+                const name = student.user?.name || "Unknown Student";
+                const initials = name
+                  .split(" ")
+                  .map((p) => p[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase();
                 return (
                   <div key={student.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-card p-3 hover:bg-muted/20 transition-colors">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="size-8 shrink-0 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
-                        {student.user.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
+                        {initials}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{student.user.name}</p>
-                        <p className="text-xs text-muted-foreground">{student.studentId}</p>
+                        <p className="text-sm font-medium truncate">{name}</p>
+                        <p className="text-xs text-muted-foreground">{student.studentId || "—"}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">

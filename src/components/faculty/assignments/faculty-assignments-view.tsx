@@ -342,13 +342,15 @@ export function FacultyAssignmentsView() {
             if (!v) setEditTarget(undefined);
           }}
         >
-          <DialogTrigger>
-            <Button
-              size="sm"
-              className="gap-2 text-xs cursor-pointer self-start sm:self-auto"
-            >
-              <Plus className="size-3.5" /> New Assignment
-            </Button>
+          <DialogTrigger
+            render={
+              <Button
+                size="sm"
+                className="gap-2 text-xs cursor-pointer self-start sm:self-auto"
+              />
+            }
+          >
+            <Plus className="size-3.5" /> New Assignment
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>

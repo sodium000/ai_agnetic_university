@@ -75,15 +75,25 @@ export function AdminDashboard() {
     queryFn: fetchAdminDashboardStats,
   });
 
-  const { data: enrollments } = useQuery<AdminEnrollment[]>({
+  const { data: enrollmentsRaw } = useQuery<AdminEnrollment[]>({
     queryKey: ["admin", "enrollments"],
     queryFn: fetchAdminEnrollments,
   });
 
-  const { data: payments } = useQuery<AdminPayment[]>({
+  const { data: paymentsRaw } = useQuery<AdminPayment[]>({
     queryKey: ["admin", "payments"],
     queryFn: fetchAdminPayments,
   });
+
+  const enrollments = Array.isArray(enrollmentsRaw)
+    ? enrollmentsRaw
+    : (enrollmentsRaw as any)?.enrollments ||
+      (enrollmentsRaw as any)?.data ||
+      [];
+
+  const payments = Array.isArray(paymentsRaw)
+    ? paymentsRaw
+    : (paymentsRaw as any)?.payments || (paymentsRaw as any)?.data || [];
 
   const handleRefresh = async () => {
     await Promise.all([
@@ -103,13 +113,16 @@ export function AdminDashboard() {
               <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Live Academic System
             </span>
-            <span className="text-xs text-muted-foreground">• Semester: Fall 2026</span>
+            <span className="text-xs text-muted-foreground">
+              • Semester: Fall 2026
+            </span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl text-foreground">
             University Admin Console
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            System-wide statistics, institutional governance, and academic administration.
+            System-wide statistics, institutional governance, and academic
+            administration.
           </p>
         </div>
 
@@ -190,7 +203,9 @@ export function AdminDashboard() {
         <Card className="lg:col-span-4 shadow-xs border-border/80">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
-              <CardTitle className="text-base font-semibold">Tuition & Revenue Stream</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Tuition & Revenue Stream
+              </CardTitle>
               <CardDescription className="text-xs">
                 Monthly revenue collections (in BDT) over current academic year
               </CardDescription>
@@ -205,20 +220,28 @@ export function AdminDashboard() {
           <CardContent>
             <div className="space-y-4">
               <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 pt-2 items-end h-44">
-                {(stats?.monthlyRevenue || [
-                  { month: "Jan", amount: 2200000 },
-                  { month: "Feb", amount: 3100000 },
-                  { month: "Mar", amount: 1800000 },
-                  { month: "Apr", amount: 4500000 },
-                  { month: "May", amount: 2900000 },
-                  { month: "Jun", amount: 5100000 },
-                  { month: "Jul", amount: 3750000 },
-                  { month: "Aug", amount: 5100000 },
-                ]).map((item) => {
+                {(
+                  stats?.monthlyRevenue || [
+                    { month: "Jan", amount: 2200000 },
+                    { month: "Feb", amount: 3100000 },
+                    { month: "Mar", amount: 1800000 },
+                    { month: "Apr", amount: 4500000 },
+                    { month: "May", amount: 2900000 },
+                    { month: "Jun", amount: 5100000 },
+                    { month: "Jul", amount: 3750000 },
+                    { month: "Aug", amount: 5100000 },
+                  ]
+                ).map((item) => {
                   const max = 5500000;
-                  const heightPercent = Math.min(100, Math.round((item.amount / max) * 100));
+                  const heightPercent = Math.min(
+                    100,
+                    Math.round((item.amount / max) * 100),
+                  );
                   return (
-                    <div key={item.month} className="flex flex-col items-center gap-1.5 h-full justify-end group">
+                    <div
+                      key={item.month}
+                      className="flex flex-col items-center gap-1.5 h-full justify-end group"
+                    >
                       <div className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity font-mono">
                         {(item.amount / 100000).toFixed(0)}L
                       </div>
@@ -235,7 +258,8 @@ export function AdminDashboard() {
               </div>
               <div className="flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-primary" /> Net Collections: ৳28.45M
+                  <span className="size-2 rounded-full bg-primary" /> Net
+                  Collections: ৳28.45M
                 </span>
                 <span className="font-medium text-emerald-600 dark:text-emerald-400">
                   +18.4% vs Previous Term
@@ -249,7 +273,9 @@ export function AdminDashboard() {
         <Card className="lg:col-span-3 shadow-xs border-border/80">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
-              <CardTitle className="text-base font-semibold">Enrollment Distribution</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Enrollment Distribution
+              </CardTitle>
               <CardDescription className="text-xs">
                 Active students distributed by academic department
               </CardDescription>
@@ -263,19 +289,23 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3.5">
-              {(stats?.enrollmentByDepartment || [
-                { department: "CSE (Computer Science)", count: 1450 },
-                { department: "EEE (Electrical Eng)", count: 820 },
-                { department: "BBA (Business Admin)", count: 760 },
-                { department: "Pharmacy", count: 480 },
-                { department: "English & Humanities", count: 330 },
-              ]).map((item) => {
+              {(
+                stats?.enrollmentByDepartment || [
+                  { department: "CSE (Computer Science)", count: 1450 },
+                  { department: "EEE (Electrical Eng)", count: 820 },
+                  { department: "BBA (Business Admin)", count: 760 },
+                  { department: "Pharmacy", count: 480 },
+                  { department: "English & Humanities", count: 330 },
+                ]
+              ).map((item) => {
                 const total = 3840;
                 const pct = Math.round((item.count / total) * 100);
                 return (
                   <div key={item.department} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-foreground">{item.department}</span>
+                      <span className="font-medium text-foreground">
+                        {item.department}
+                      </span>
                       <span className="text-muted-foreground font-mono">
                         {item.count} ({pct}%)
                       </span>
@@ -365,7 +395,9 @@ export function AdminDashboard() {
         <Card className="shadow-xs border-border/80">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
-              <CardTitle className="text-base font-semibold">Recent Enrollments</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Recent Enrollments
+              </CardTitle>
               <CardDescription className="text-xs">
                 Real-time course enrollments system-wide
               </CardDescription>
@@ -379,26 +411,37 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-border/60">
-              {(enrollments?.slice(0, 5) || []).map((enr) => (
-                <div key={enr.id} className="flex items-center justify-between px-4 py-3 text-xs">
-                  <div className="space-y-0.5">
-                    <p className="font-medium text-foreground">
-                      {enr.student?.user.name || "Student"}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {enr.student?.studentId} • {enr.section?.course.code}
-                    </p>
+              {(Array.isArray(enrollments) ? enrollments.slice(0, 5) : []).map(
+                (enr) => (
+                  <div
+                    key={enr.id}
+                    className="flex items-center justify-between px-4 py-3 text-xs"
+                  >
+                    <div className="space-y-0.5">
+                      <p className="font-medium text-foreground">
+                        {enr.student?.user.name || "Student"}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {enr.student?.studentId} • {enr.section?.course.code}
+                      </p>
+                    </div>
+                    <div className="text-right space-y-1">
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
+                      >
+                        {enr.status}
+                      </Badge>
+                      <p className="text-[10px] text-muted-foreground">
+                        {new Date(enr.enrolledAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right space-y-1">
-                    <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                      {enr.status}
-                    </Badge>
-                    <p className="text-[10px] text-muted-foreground">
-                      {new Date(enr.enrolledAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </CardContent>
         </Card>
@@ -407,7 +450,9 @@ export function AdminDashboard() {
         <Card className="shadow-xs border-border/80">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
-              <CardTitle className="text-base font-semibold">Payment Transactions</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Payment Transactions
+              </CardTitle>
               <CardDescription className="text-xs">
                 Verified tuition and registration receipts
               </CardDescription>
@@ -421,26 +466,31 @@ export function AdminDashboard() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-border/60">
-              {(payments?.slice(0, 5) || []).map((pay) => (
-                <div key={pay.id} className="flex items-center justify-between px-4 py-3 text-xs">
-                  <div className="space-y-0.5">
-                    <p className="font-medium text-foreground">
-                      {pay.student?.user.name || "Student"}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {pay.transactionId} • {pay.paymentMethod}
-                    </p>
+              {(Array.isArray(payments) ? payments.slice(0, 5) : []).map(
+                (pay) => (
+                  <div
+                    key={pay.id}
+                    className="flex items-center justify-between px-4 py-3 text-xs"
+                  >
+                    <div className="space-y-0.5">
+                      <p className="font-medium text-foreground">
+                        {pay.student?.user.name || "Student"}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {pay.transactionId} • {pay.paymentMethod}
+                      </p>
+                    </div>
+                    <div className="text-right space-y-0.5">
+                      <span className="font-semibold text-foreground font-mono">
+                        ৳{pay.amount.toLocaleString()}
+                      </span>
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                        PAID
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right space-y-0.5">
-                    <span className="font-semibold text-foreground font-mono">
-                      ৳{pay.amount.toLocaleString()}
-                    </span>
-                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                      PAID
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </CardContent>
         </Card>
@@ -484,7 +534,12 @@ function KpiCard({
           <CardDescription className="text-xs font-medium text-muted-foreground">
             {title}
           </CardDescription>
-          <div className={cn("size-8 flex items-center justify-center rounded-lg border", colorMap[color])}>
+          <div
+            className={cn(
+              "size-8 flex items-center justify-center rounded-lg border",
+              colorMap[color],
+            )}
+          >
             <Icon className="size-4" />
           </div>
         </CardHeader>
@@ -578,7 +633,8 @@ function QuickActionModals() {
       queryClient.invalidateQueries({ queryKey: ["admin"] });
       setOpenStudent(false);
     },
-    onError: (err: any) => toast.error(err.message || "Failed to create student"),
+    onError: (err: any) =>
+      toast.error(err.message || "Failed to create student"),
   });
 
   const forceEnrollMutation = useMutation({
@@ -595,14 +651,23 @@ function QuickActionModals() {
     <div className="flex items-center gap-2">
       {/* Quick Force Enroll */}
       <Dialog open={openEnroll} onOpenChange={setOpenEnroll}>
-        <DialogTrigger render={<Button size="sm" variant="outline" className="gap-1.5 text-xs cursor-pointer" />}>
+        <DialogTrigger
+          render={
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 text-xs cursor-pointer"
+            />
+          }
+        >
           <UserCheck className="size-3.5" /> Force Enroll
         </DialogTrigger>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Force Enroll Student</DialogTitle>
             <DialogDescription>
-              Directly assign a student to a section, overriding capacity limits.
+              Directly assign a student to a section, overriding capacity
+              limits.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-2">
@@ -611,7 +676,9 @@ function QuickActionModals() {
               <Input
                 placeholder="Student UUID or ID"
                 value={enrollForm.studentId}
-                onChange={(e) => setEnrollForm((p) => ({ ...p, studentId: e.target.value }))}
+                onChange={(e) =>
+                  setEnrollForm((p) => ({ ...p, studentId: e.target.value }))
+                }
               />
             </div>
             <div className="space-y-1.5">
@@ -619,7 +686,9 @@ function QuickActionModals() {
               <select
                 className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                 value={enrollForm.sectionId}
-                onChange={(e) => setEnrollForm((p) => ({ ...p, sectionId: e.target.value }))}
+                onChange={(e) =>
+                  setEnrollForm((p) => ({ ...p, sectionId: e.target.value }))
+                }
               >
                 {mockAdminSections.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -629,7 +698,11 @@ function QuickActionModals() {
               </select>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" size="sm" onClick={() => setOpenEnroll(false)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setOpenEnroll(false)}
+              >
                 Cancel
               </Button>
               <Button
@@ -637,7 +710,9 @@ function QuickActionModals() {
                 onClick={() => forceEnrollMutation.mutate()}
                 disabled={forceEnrollMutation.isPending}
               >
-                {forceEnrollMutation.isPending ? "Enrolling..." : "Confirm Enrollment"}
+                {forceEnrollMutation.isPending
+                  ? "Enrolling..."
+                  : "Confirm Enrollment"}
               </Button>
             </div>
           </div>
@@ -646,14 +721,19 @@ function QuickActionModals() {
 
       {/* Quick Add Student */}
       <Dialog open={openStudent} onOpenChange={setOpenStudent}>
-        <DialogTrigger render={<Button size="sm" className="gap-1.5 text-xs cursor-pointer" />}>
+        <DialogTrigger
+          render={
+            <Button size="sm" className="gap-1.5 text-xs cursor-pointer" />
+          }
+        >
           <UserPlus className="size-3.5" /> New Student
         </DialogTrigger>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Register Student</DialogTitle>
             <DialogDescription>
-              Create an authentication account and academic profile for a new student.
+              Create an authentication account and academic profile for a new
+              student.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 pt-2">
@@ -663,7 +743,9 @@ function QuickActionModals() {
                 <Input
                   placeholder="Ali Rahman"
                   value={studentForm.name}
-                  onChange={(e) => setStudentForm((p) => ({ ...p, name: e.target.value }))}
+                  onChange={(e) =>
+                    setStudentForm((p) => ({ ...p, name: e.target.value }))
+                  }
                 />
               </div>
               <div className="space-y-1.5">
@@ -672,7 +754,9 @@ function QuickActionModals() {
                   type="email"
                   placeholder="ali@student.edu"
                   value={studentForm.email}
-                  onChange={(e) => setStudentForm((p) => ({ ...p, email: e.target.value }))}
+                  onChange={(e) =>
+                    setStudentForm((p) => ({ ...p, email: e.target.value }))
+                  }
                 />
               </div>
             </div>
@@ -683,7 +767,9 @@ function QuickActionModals() {
                 <Input
                   type="password"
                   value={studentForm.password}
-                  onChange={(e) => setStudentForm((p) => ({ ...p, password: e.target.value }))}
+                  onChange={(e) =>
+                    setStudentForm((p) => ({ ...p, password: e.target.value }))
+                  }
                 />
               </div>
               <div className="space-y-1.5">
@@ -691,7 +777,9 @@ function QuickActionModals() {
                 <Input
                   placeholder="01711000000"
                   value={studentForm.phone}
-                  onChange={(e) => setStudentForm((p) => ({ ...p, phone: e.target.value }))}
+                  onChange={(e) =>
+                    setStudentForm((p) => ({ ...p, phone: e.target.value }))
+                  }
                 />
               </div>
             </div>
@@ -702,7 +790,12 @@ function QuickActionModals() {
                 <select
                   className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                   value={studentForm.departmentId}
-                  onChange={(e) => setStudentForm((p) => ({ ...p, departmentId: e.target.value }))}
+                  onChange={(e) =>
+                    setStudentForm((p) => ({
+                      ...p,
+                      departmentId: e.target.value,
+                    }))
+                  }
                 >
                   {mockAdminDepartments.map((d) => (
                     <option key={d.id} value={d.id}>
@@ -716,7 +809,9 @@ function QuickActionModals() {
                 <select
                   className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                   value={studentForm.programId}
-                  onChange={(e) => setStudentForm((p) => ({ ...p, programId: e.target.value }))}
+                  onChange={(e) =>
+                    setStudentForm((p) => ({ ...p, programId: e.target.value }))
+                  }
                 >
                   {mockAdminPrograms.map((pr) => (
                     <option key={pr.id} value={pr.id}>
@@ -733,7 +828,12 @@ function QuickActionModals() {
                 <Input
                   type="number"
                   value={studentForm.admissionYear}
-                  onChange={(e) => setStudentForm((p) => ({ ...p, admissionYear: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setStudentForm((p) => ({
+                      ...p,
+                      admissionYear: Number(e.target.value),
+                    }))
+                  }
                 />
               </div>
               <div className="space-y-1.5">
@@ -741,7 +841,12 @@ function QuickActionModals() {
                 <Input
                   type="number"
                   value={studentForm.currentYear}
-                  onChange={(e) => setStudentForm((p) => ({ ...p, currentYear: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setStudentForm((p) => ({
+                      ...p,
+                      currentYear: Number(e.target.value),
+                    }))
+                  }
                 />
               </div>
               <div className="space-y-1.5">
@@ -749,7 +854,12 @@ function QuickActionModals() {
                 <Input
                   type="number"
                   value={studentForm.currentSemester}
-                  onChange={(e) => setStudentForm((p) => ({ ...p, currentSemester: Number(e.target.value) }))}
+                  onChange={(e) =>
+                    setStudentForm((p) => ({
+                      ...p,
+                      currentSemester: Number(e.target.value),
+                    }))
+                  }
                 />
               </div>
             </div>
@@ -760,7 +870,9 @@ function QuickActionModals() {
                 <select
                   className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                   value={studentForm.gender}
-                  onChange={(e) => setStudentForm((p) => ({ ...p, gender: e.target.value }))}
+                  onChange={(e) =>
+                    setStudentForm((p) => ({ ...p, gender: e.target.value }))
+                  }
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -772,7 +884,12 @@ function QuickActionModals() {
                 <Input
                   type="date"
                   value={studentForm.dateOfBirth}
-                  onChange={(e) => setStudentForm((p) => ({ ...p, dateOfBirth: e.target.value }))}
+                  onChange={(e) =>
+                    setStudentForm((p) => ({
+                      ...p,
+                      dateOfBirth: e.target.value,
+                    }))
+                  }
                 />
               </div>
             </div>
@@ -782,12 +899,18 @@ function QuickActionModals() {
               <Input
                 placeholder="45 University Ave"
                 value={studentForm.address}
-                onChange={(e) => setStudentForm((p) => ({ ...p, address: e.target.value }))}
+                onChange={(e) =>
+                  setStudentForm((p) => ({ ...p, address: e.target.value }))
+                }
               />
             </div>
 
             <div className="flex justify-end gap-2 pt-3">
-              <Button variant="outline" size="sm" onClick={() => setOpenStudent(false)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setOpenStudent(false)}
+              >
                 Cancel
               </Button>
               <Button

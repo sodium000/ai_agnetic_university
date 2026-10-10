@@ -283,13 +283,15 @@ export function FacultyExamsView() {
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger>
-            <Button
-              size="sm"
-              className="gap-2 text-xs cursor-pointer self-start sm:self-auto"
-            >
-              <Plus className="size-3.5" /> Schedule Exam
-            </Button>
+          <DialogTrigger
+            render={
+              <Button
+                size="sm"
+                className="gap-2 text-xs cursor-pointer self-start sm:self-auto"
+              />
+            }
+          >
+            <Plus className="size-3.5" /> Schedule Exam
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>

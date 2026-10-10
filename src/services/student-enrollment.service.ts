@@ -348,4 +348,78 @@ export async function dropCourseEnrollment(
   throw new Error(response?.message || "Failed to drop enrollment");
 }
 
+/**
+ * GET /api/v1/student/me/enrollments
+ * Returns all enrollments for the student
+ */
+export async function fetchStudentEnrollments() {
+  const response = await apiFetch<{ success: boolean; data: EnrolledCourseEnrollment[] }>(
+    "/api/v1/student/me/enrollments",
+  );
+  return response?.data || [];
+}
+
+/**
+ * GET /api/v1/student/me/schedule
+ * Returns class and exam schedules
+ */
+export async function fetchStudentSchedule() {
+  const response = await apiFetch<{ success: boolean; data: unknown }>(
+    "/api/v1/student/me/schedule",
+  );
+  return response?.data;
+}
+
+/**
+ * GET /api/v1/student/me/attendance
+ * Returns attendance records
+ */
+export async function fetchStudentAttendance() {
+  const response = await apiFetch<{ success: boolean; data: unknown }>(
+    "/api/v1/student/me/attendance",
+  );
+  return response?.data;
+}
+
+/**
+ * GET /api/v1/student/me/transcript
+ * Returns full transcript with CGPA
+ */
+export async function fetchStudentTranscript() {
+  const response = await apiFetch<{ success: boolean; data: unknown }>(
+    "/api/v1/student/me/transcript",
+  );
+  return response?.data;
+}
+
+/**
+ * GET /api/v1/student/me/assignments
+ * View student assignments
+ */
+export async function fetchStudentAssignments() {
+  const response = await apiFetch<{ success: boolean; data: unknown[] }>(
+    "/api/v1/student/me/assignments",
+  );
+  return response?.data || [];
+}
+
+/**
+ * POST /api/v1/student/me/assignments
+ * Submit an assignment
+ */
+export async function submitStudentAssignment(
+  payload: Record<string, unknown> | BodyInit,
+) {
+  const response = await apiFetch<{ success: boolean; data: unknown }>(
+    "/api/v1/student/me/assignments",
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
+  return response?.data;
+}
+
+
 export { extractErrorMessage };
+

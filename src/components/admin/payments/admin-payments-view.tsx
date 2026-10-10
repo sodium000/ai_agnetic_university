@@ -35,7 +35,7 @@ export function AdminPaymentsView() {
   const [methodFilter, setMethodFilter] = useState("");
 
   const {
-    data: payments = [],
+    data: rawPayments = [],
     isLoading,
     refetch,
   } = useQuery({
@@ -43,18 +43,31 @@ export function AdminPaymentsView() {
     queryFn: fetchAdminPayments,
   });
 
+  const payments: AdminPayment[] = Array.isArray(rawPayments)
+    ? rawPayments
+    : (rawPayments as { payments?: AdminPayment[]; data?: AdminPayment[] })
+        ?.payments ||
+      (rawPayments as { payments?: AdminPayment[]; data?: AdminPayment[] })
+        ?.data ||
+      [];
+
   const filteredPayments = payments.filter((p) => {
     const matchesSearch =
       !search ||
       p.transactionId.toLowerCase().includes(search.toLowerCase()) ||
-      (p.student?.user.name && p.student.user.name.toLowerCase().includes(search.toLowerCase())) ||
-      (p.student?.studentId && p.student.studentId.toLowerCase().includes(search.toLowerCase()));
+      (p.student?.user.name &&
+        p.student.user.name.toLowerCase().includes(search.toLowerCase())) ||
+      (p.student?.studentId &&
+        p.student.studentId.toLowerCase().includes(search.toLowerCase()));
 
     const matchesMethod = !methodFilter || p.paymentMethod === methodFilter;
     return matchesSearch && matchesMethod;
   });
 
-  const totalCollected = payments.reduce((sum, p) => (p.status === "PAID" ? sum + p.amount : sum), 0);
+  const totalCollected = payments.reduce(
+    (sum, p) => (p.status === "PAID" ? sum + p.amount : sum),
+    0,
+  );
 
   const exportCsv = () => {
     toast.success("Financial ledger exported to CSV successfully");
@@ -78,7 +91,8 @@ export function AdminPaymentsView() {
             Financial Ledger & Payments
           </h1>
           <p className="text-sm text-muted-foreground">
-            System-wide tuition fees, transaction logs, mobile banking receipts, and audit trail.
+            System-wide tuition fees, transaction logs, mobile banking receipts,
+            and audit trail.
           </p>
         </div>
 
@@ -105,7 +119,9 @@ export function AdminPaymentsView() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="border-border/80 shadow-xs">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardDescription className="text-xs font-medium">Total Collected</CardDescription>
+            <CardDescription className="text-xs font-medium">
+              Total Collected
+            </CardDescription>
             <Banknote className="size-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
@@ -120,12 +136,17 @@ export function AdminPaymentsView() {
 
         <Card className="border-border/80 shadow-xs">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardDescription className="text-xs font-medium">bKash Volume</CardDescription>
+            <CardDescription className="text-xs font-medium">
+              bKash Volume
+            </CardDescription>
             <Wallet className="size-4 text-pink-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground font-mono">
-              ৳{(totalCollected * 0.45).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              ৳
+              {(totalCollected * 0.45).toLocaleString(undefined, {
+                maximumFractionDigits: 0,
+              })}
             </div>
             <p className="text-[11px] text-muted-foreground mt-1">
               45% of total tuition volume
@@ -135,12 +156,17 @@ export function AdminPaymentsView() {
 
         <Card className="border-border/80 shadow-xs">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardDescription className="text-xs font-medium">Nagad & Rocket</CardDescription>
+            <CardDescription className="text-xs font-medium">
+              Nagad & Rocket
+            </CardDescription>
             <Wallet className="size-4 text-amber-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground font-mono">
-              ৳{(totalCollected * 0.25).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              ৳
+              {(totalCollected * 0.25).toLocaleString(undefined, {
+                maximumFractionDigits: 0,
+              })}
             </div>
             <p className="text-[11px] text-muted-foreground mt-1">
               25% instant mobile transfers
@@ -150,12 +176,17 @@ export function AdminPaymentsView() {
 
         <Card className="border-border/80 shadow-xs">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardDescription className="text-xs font-medium">Bank & Card Transfers</CardDescription>
+            <CardDescription className="text-xs font-medium">
+              Bank & Card Transfers
+            </CardDescription>
             <CreditCard className="size-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground font-mono">
-              ৳{(totalCollected * 0.30).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              ৳
+              {(totalCollected * 0.3).toLocaleString(undefined, {
+                maximumFractionDigits: 0,
+              })}
             </div>
             <p className="text-[11px] text-muted-foreground mt-1">
               Verified corporate gateway
@@ -217,19 +248,28 @@ export function AdminPaymentsView() {
               <tbody className="divide-y divide-border/60">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <td
+                      colSpan={7}
+                      className="text-center py-12 text-muted-foreground"
+                    >
                       Loading payment records...
                     </td>
                   </tr>
                 ) : filteredPayments.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <td
+                      colSpan={7}
+                      className="text-center py-12 text-muted-foreground"
+                    >
                       No payment records match current criteria.
                     </td>
                   </tr>
                 ) : (
                   filteredPayments.map((p) => (
-                    <tr key={p.id} className="hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={p.id}
+                      className="hover:bg-muted/30 transition-colors"
+                    >
                       <td className="px-4 py-3 font-mono font-medium text-foreground">
                         {p.transactionId}
                       </td>

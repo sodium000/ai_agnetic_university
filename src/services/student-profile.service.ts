@@ -78,6 +78,28 @@ export async function updateStudentProfileField(
   throw new Error(response?.message || "Failed to update profile field");
 }
 
+/**
+ * Create or save the student profile on the backend.
+ * Endpoint: POST /api/v1/student/me
+ */
+export async function createStudentProfile(
+  payload: Partial<StudentProfile>,
+): Promise<StudentProfile> {
+  const response = await apiFetch<StudentProfileApiResponse>(
+    "/api/v1/student/me",
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
+
+  if (response?.data) {
+    return response.data;
+  }
+  throw new Error(response?.message || "Failed to create profile");
+}
+
+
 export function extractErrorMessage(err: unknown, defaultMsg: string): string {
   if (typeof err === "object" && err !== null) {
     const errorObj = err as {

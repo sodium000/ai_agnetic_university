@@ -3,7 +3,7 @@
 import { useForm } from "@tanstack/react-form";
 import { Eye, EyeClosed, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,11 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { getRoleDashboardPath } from "@/lib/auth";
+import {
+  getRoleFromAccessToken,
+  getSafeRedirectPath,
+  normalizeRole,
+} from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { loginUser } from "@/services/auth.service";
 import {
@@ -29,7 +33,8 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextUrl = searchParams.get("next");
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm({
@@ -44,12 +49,31 @@ export function LoginForm({
 
     onSubmit: async ({ value }) => {
       try {
-        await loginUser(value);
-        // if (typeof window !== "undefined") {
-        //   sessionStorage.setItem("loginEmail", value.email);
-        // }
+        const data = await loginUser(value);
+        toast.success(`Welcome back, ${data?.user?.name || "User"}!`);
+
+        const role =
+          normalizeRole(data?.user?.role) ??
+          getRoleFromAccessToken(data?.accessToken);
+
+        // Persist a normalized role cookie so the proxy can route returning users.
+        if (role) {
+          const expires = new Date(
+            Date.now() + 7 * 24 * 60 * 60 * 1000,
+          ).toUTCString();
+          document.cookie = `userRole=${role}; path=/; expires=${expires}; SameSite=Lax`;
+        }
+
+        const destination = getSafeRedirectPath(role, nextUrl);
+
+        // Force browser page reload so proxy.ts picks up the fresh cookies
+        window.location.href = destination;
       } catch (err: unknown) {
-        toast.error("Login failed. Please try again.");
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Login failed. Please check your credentials.";
+        toast.error(msg);
       }
     },
   });
@@ -192,8 +216,8 @@ export function LoginForm({
                     size="sm"
                     className="text-xs h-8 cursor-pointer border-dashed"
                     onClick={() => {
-                      form.setFieldValue("email", "admin@university.edu");
-                      form.setFieldValue("password", "Admin@1234");
+                      form.setFieldValue("email", "raisultonmoy.dev@gmail.com");
+                      form.setFieldValue("password", "Password123!");
                     }}
                   >
                     Admin
@@ -204,8 +228,8 @@ export function LoginForm({
                     size="sm"
                     className="text-xs h-8 cursor-pointer border-dashed"
                     onClick={() => {
-                      form.setFieldValue("email", "rahim@university.edu");
-                      form.setFieldValue("password", "FacPass@123");
+                      form.setFieldValue("email", "sterlingmarcus871@gmail.com");
+                      form.setFieldValue("password", "Password123!");
                     }}
                   >
                     Faculty

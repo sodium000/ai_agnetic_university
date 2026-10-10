@@ -27,7 +27,7 @@ function StudentsContent() {
     staleTime: 30000,
   });
 
-  const students: TaughtStudent[] = data ?? [];
+  const students: TaughtStudent[] = Array.isArray(data) ? data : [];
 
   return (
     <main className="flex flex-1 flex-col gap-6 p-4 md:p-6 lg:gap-8 max-w-7xl mx-auto w-full">
@@ -65,23 +65,31 @@ function StudentsContent() {
       ) : students.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {students.map((student) => {
-            const initials = student.user.name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+            const name = student.user?.name || "Unknown Student";
+            const initials = name
+              .split(" ")
+              .map((p) => p[0])
+              .slice(0, 2)
+              .join("")
+              .toUpperCase();
             return (
               <Card key={student.id} className="border-border/80 shadow-xs hover:shadow-md transition-all duration-200">
                 <CardContent className="flex items-center gap-4 p-4">
                   <Avatar className="size-12 border border-primary/20">
-                    {student.user.photoUrl && <AvatarImage src={student.user.photoUrl} alt={student.user.name} />}
+                    {student.user?.photoUrl && (
+                      <AvatarImage src={student.user.photoUrl} alt={name} />
+                    )}
                     <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{initials}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1 space-y-1">
-                    <p className="text-sm font-semibold truncate">{student.user.name}</p>
+                    <p className="text-sm font-semibold truncate">{name}</p>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="secondary" className="text-xs font-mono">{student.studentId}</Badge>
+                      <Badge variant="secondary" className="text-xs font-mono">{student.studentId || "—"}</Badge>
                       <span className="text-xs text-muted-foreground">
-                        Yr {student.currentYear}, Sem {student.currentSemester}
+                        Yr {student.currentYear || "—"}, Sem {student.currentSemester || "—"}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">{student.user.email}</p>
+                    <p className="text-xs text-muted-foreground truncate">{student.user?.email || "—"}</p>
                   </div>
                 </CardContent>
               </Card>
